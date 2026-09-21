@@ -13,7 +13,7 @@ from openpyxl.utils import get_column_letter
 
 st.set_page_config(page_title="Chantier & Suivi", page_icon="📱", layout="centered")
 
-# Style du bouton vert d'envoi
+# Style du gros bouton vert
 st.markdown("""
     <style>
     div[data-testid="stFormSubmitButton"] > button {
@@ -222,17 +222,17 @@ config = charger_config()
 tab_saisie, tab_admin = st.tabs(["📲 Saisie Chantier", "📊 Tableau de Bord"])
 
 # -------------------------------------------------------------
-# ONGLET 1 : SAISIE SÉCURISÉE VIA ST.FORM
+# ONGLET 1 : SAISIE SÉCURISÉE AVEC SÉLECTION QUANTITÉ & UNITÉ
 # -------------------------------------------------------------
 with tab_saisie:
     st.markdown("""
         <div style='background-color: #0F766E; padding: 14px; border-radius: 12px; text-align: center; margin-bottom: 15px;'>
             <h2 style='color: white; margin: 0; font-size: 20px;'>📱 Saisie du Rapport</h2>
-            <p style='color: #CCFBF1; margin: 4px 0 0 0; font-size: 13px;'>Formulaire direct garanti sans perte de données</p>
+            <p style='color: #CCFBF1; margin: 4px 0 0 0; font-size: 13px;'>Renseignez les travaux, consommations et photos</p>
         </div>
     """, unsafe_allow_html=True)
 
-    with st.form("form_pointage_complet", clear_on_submit=False):
+    with st.form("form_pointage_stable", clear_on_submit=False):
         date_jour = st.date_input("📅 Date de la journée", value=date.today())
         chantier_sel = st.selectbox("🏢 Chantier", config["chantiers"])
         tache_sel = st.selectbox("🛠️ Corps d'état", config["taches"])
@@ -253,19 +253,39 @@ with tab_saisie:
         with c_r2:
             unite = st.selectbox("Unité", ["m²", "ML", "U"])
 
+        # --- SÉLECTION DES MATÉRIAUX AVEC QUANTITÉ ET UNITÉ FIXES ---
         st.write("---")
         st.markdown("### 🧪 Matériaux Consommés")
         
-        produits_coches = st.multiselect(
-            "Produits utilisés :",
-            config["materiaux"],
-            placeholder="Sélectionnez les produits..."
-        )
+        # Produit 1
+        st.markdown("**Produit 1 :**")
+        c1, c2, c3 = st.columns([2, 1, 1])
+        with c1:
+            p1_mat = st.selectbox("Matériau 1", ["Aucun"] + config["materiaux"], key="f_p1")
+        with c2:
+            p1_qte = st.number_input("Qté 1", min_value=0.0, step=1.0, format="%.2f", key="f_q1")
+        with c3:
+            p1_uni = st.selectbox("Unité 1", ["Seaux/Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "Cartouches", "U"], key="f_u1")
 
-        quantites_text = st.text_input(
-            "Quantités et conditionnements consommés :",
-            placeholder="Ex : 4 seaux Elastotek, 1 rouleau PP, 5 sacs Morcem..."
-        )
+        # Produit 2
+        st.markdown("**Produit 2 :**")
+        c4, c5, c6 = st.columns([2, 1, 1])
+        with c4:
+            p2_mat = st.selectbox("Matériau 2", ["Aucun"] + config["materiaux"], key="f_p2")
+        with c5:
+            p2_qte = st.number_input("Qté 2", min_value=0.0, step=1.0, format="%.2f", key="f_q2")
+        with c6:
+            p2_uni = st.selectbox("Unité 2", ["Seaux/Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "Cartouches", "U"], key="f_u2")
+
+        # Produit 3
+        st.markdown("**Produit 3 :**")
+        c7, c8, c9 = st.columns([2, 1, 1])
+        with c7:
+            p3_mat = st.selectbox("Matériau 3", ["Aucun"] + config["materiaux"], key="f_p3")
+        with c8:
+            p3_qte = st.number_input("Qté 3", min_value=0.0, step=1.0, format="%.2f", key="f_q3")
+        with c9:
+            p3_uni = st.selectbox("Unité 3", ["Seaux/Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "Cartouches", "U"], key="f_u3")
 
         st.write("---")
         st.markdown("### 📸 Photos du chantier")
@@ -308,13 +328,16 @@ with tab_saisie:
 
                     saved_files.append(f"{dossier_chantier}/{dossier_date}/{nom_fichier}")
 
-                # Construction du texte consommation
-                conso_liste = []
-                if produits_coches:
-                    conso_liste.append(", ".join(produits_coches))
-                if quantites_text.strip():
-                    conso_liste.append(f"Détail : {quantites_text.strip()}")
-                conso_finale = " | ".join(conso_liste) if conso_liste else "Aucun"
+                # Rassemblement automatique des consommations saisies
+                consos = []
+                if p1_mat != "Aucun" and p1_qte > 0:
+                    consos.append(f"{p1_mat}: {p1_qte} {p1_uni}")
+                if p2_mat != "Aucun" and p2_qte > 0:
+                    consos.append(f"{p2_mat}: {p2_qte} {p2_uni}")
+                if p3_mat != "Aucun" and p3_qte > 0:
+                    consos.append(f"{p3_mat}: {p3_qte} {p3_uni}")
+                
+                conso_finale = " | ".join(consos) if consos else "Aucun"
 
                 nouvelle_ligne = {
                     "Date": str(date_jour),
@@ -339,7 +362,7 @@ with tab_saisie:
                     df_entry.to_csv(CSV_FILE, sep=';', mode='a', header=False, index=False, encoding='utf-8-sig')
 
                 st.balloons()
-                st.success(f"🎉 RAPPORT ENREGISTRÉ AVEC SUCCÈS ! Données inscrites dans le tableau et photos rangées dans : 📁 {dossier_chantier} / 📅 {dossier_date}")
+                st.success(f"🎉 RAPPORT ENREGISTRÉ ! Données inscrites dans le tableau et photos dans : 📁 {dossier_chantier} / 📅 {dossier_date}")
             except Exception as e:
                 st.error(f"❌ Erreur lors de l'enregistrement : {e}")
 
