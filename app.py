@@ -57,12 +57,9 @@ def charger_donnees():
     if not os.path.exists(CSV_FILE):
         return None
     try:
-        # Détection automatique du séparateur (; ou ,)
-        df = pd.read_csv(CSV_FILE, sep=None, engine='python', encoding='utf-8-sig', on_bad_lines='skip')
-        if "Chantier" not in df.columns:
-            # Réinitialisation si l'en-tête est corrompu
-            os.remove(CSV_FILE)
-            return None
+        df = pd.read_csv(CSV_FILE, sep=';', encoding='utf-8-sig', on_bad_lines='skip')
+        if "Chantier" not in df.columns or len(df.columns) < 8:
+            df = pd.read_csv(CSV_FILE, sep=',', encoding='utf-8-sig', on_bad_lines='skip')
         return df
     except Exception:
         return None
@@ -72,7 +69,7 @@ config = charger_config()
 tab_saisie, tab_admin = st.tabs(["📲 Saisie Chantier", "📊 Tableau de Bord"])
 
 # -------------------------------------------------------------
-# ONGLET 1 : SAISIE OUVRIER
+# ONGLET 1 : SAISIE CHANTIER
 # -------------------------------------------------------------
 with tab_saisie:
     st.markdown("""
@@ -129,7 +126,7 @@ with tab_saisie:
             else:
                 noms_sauvegardes = []
                 chantier_clean = chantier_sel.split('(')[0].replace(" ", "_")
-                tache_clean = tache_sel.replace(" ", "_")[:12]
+                tache_clean = tache_sel.replace(" ", "_")[:10]
 
                 for idx, p in enumerate(photos_galerie):
                     ext = ".jpg"
@@ -146,19 +143,22 @@ with tab_saisie:
 
                 nouvelle_ligne = {
                     "Date": str(date_jour),
-                    "Chantier": chantier_sel,
-                    "Corps_d_etat": tache_sel,
-                    "Phase": phase_travaux,
-                    "Rendement": rendement,
-                    "Unite": unite,
+                    "Chantier": str(chantier_sel),
+                    "Corps_d_etat": str(tache_sel),
+                    "Phase": str(phase_travaux),
+                    "Rendement": str(rendement),
+                    "Unite": str(unite),
                     "Effectif": ", ".join(macons_presents),
                     "Nb_Ouvriers": len(macons_presents),
-                    "Photos": ",".join(noms_sauvegardes),
+                    "Photos": "|".join(noms_sauvegardes),
                     "Nb_Photos": len(noms_sauvegardes),
-                    "Legende": legende.replace(";", " ")
+                    "Legende": str(legende).replace(";", " ").replace("|", " ")
                 }
 
                 df_entry = pd.DataFrame([nouvelle_ligne])
+                colonnes_ordre = ["Date", "Chantier", "Corps_d_etat", "Phase", "Rendement", "Unite", "Effectif", "Nb_Ouvriers", "Photos", "Nb_Photos", "Legende"]
+                df_entry = df_entry[colonnes_ordre]
+
                 if os.path.exists(CSV_FILE):
                     df_entry.to_csv(CSV_FILE, sep=';', mode='a', header=False, index=False, encoding='utf-8-sig')
                 else:
@@ -183,12 +183,12 @@ with tab_admin:
         df_all = charger_donnees()
         total_photos = len(os.listdir(PHOTOS_DIR)) if os.path.exists(PHOTOS_DIR) else 0
 
-        # --- CARTES INDICATEURS (KPIs) ---
+        # --- CARTES INDICATEURS ---
         kpi1, kpi2, kpi3 = st.columns(3)
         with kpi1:
             total_m2 = 0.0
             if df_all is not None and "Rendement" in df_all.columns and "Unite" in df_all.columns:
-                total_m2 = pd.to_numeric(df_all[df_all["Unite"] == "m²"]["Rendement"], errors='coerce').sum()
+                total_m2 = pd.to_numeric(df_all[df_all["Unite"].str.contains("m²", na=False)]["Rendement"], errors='coerce').sum()
             st.metric("Total Réalisé", f"{total_m2:.1f} m²")
         with kpi2:
             st.metric("Photos Reçues", f"{total_photos} 📸")
@@ -198,7 +198,7 @@ with tab_admin:
 
         st.write("")
 
-        # --- ACTIONS RAPIDES EXPORT ---
+        # --- EXPORT ---
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
             fichiers_disponibles = os.listdir(PHOTOS_DIR) if os.path.exists(PHOTOS_DIR) else []
@@ -235,9 +235,10 @@ with tab_admin:
 
         st.write("---")
 
-        # --- FILTRE & CARTES DES FICHES ---
+        # --- FILTRE & AFFICHAGE DES CARTES ---
         if df_all is not None and not df_all.empty and "Chantier" in df_all.columns:
-            liste_chantiers = ["Tous les chantiers"] + list(df_all["Chantier"].dropna().unique())
+            chantiers_bruts = [c for c in df_all["Chantier"].dropna().unique() if not str(c).startswith("2026-")]
+            liste_chantiers = ["Tous les chantiers"] + list(chantiers_bruts)
             filtre_ch = st.selectbox("🔍 Filtrer par projet :", liste_chantiers)
 
             df_vue = df_all.copy()
@@ -247,6 +248,10 @@ with tab_admin:
             st.write(f"Affichage de **{len(df_vue)}** fiche(s) :")
 
             for _, row in df_vue.iloc[::-1].iterrows():
+                # Ignorer les lignes mal formées
+                if str(row.get("Chantier", "")).startswith("2026-") or "nan" in str(row.get("Chantier", "")):
+                    continue
+
                 with st.container():
                     st.markdown(f"""
                         <div style='background-color: #F8FAFC; border-left: 5px solid #0F766E; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-top: 1px solid #E2E8F0; border-right: 1px solid #E2E8F0; border-bottom: 1px solid #E2E8F0;'>
@@ -261,13 +266,13 @@ with tab_admin:
                             <div style='margin-top: 4px; font-size: 13px; color: #64748B;'>
                                 👷 <i>{row.get("Effectif", "")}</i>
                             </div>
-                            {"<div style='margin-top: 4px; font-size: 13px; color: #0284C7;'>💬 " + str(row.get("Legende")) + "</div>" if pd.notna(row.get("Legende")) and str(row.get("Legende")).strip() else ""}
+                            {"<div style='margin-top: 4px; font-size: 13px; color: #0284C7;'>💬 " + str(row.get("Legende")) + "</div>" if pd.notna(row.get("Legende")) and str(row.get("Legende")).strip() and str(row.get("Legende")) != "nan" else ""}
                         </div>
                     """, unsafe_allow_html=True)
 
-                    photos_str = str(row.get("Photos", ""))
-                    fichiers = photos_str.split(",") if "," in photos_str else photos_str.split(";")
-                    photos_valides = [f.strip() for f in fichiers if os.path.exists(os.path.join(PHOTOS_DIR, f.strip()))]
+                    photos_raw = str(row.get("Photos", ""))
+                    fichiers = [f.strip() for f in photos_raw.replace(",", "|").replace(";", "|").split("|") if f.strip()]
+                    photos_valides = [f for f in fichiers if os.path.exists(os.path.join(PHOTOS_DIR, f))]
 
                     if photos_valides:
                         cols = st.columns(len(photos_valides) if len(photos_valides) <= 3 else 3)
