@@ -38,6 +38,22 @@ CONFIG_DEFAUT = {
         "coupe-feu", "Couvre-joint", "DALLE Cheminée", "ELASTOTEK", "Forme de pente",
         "GOURGE", "JOINT DE DILATATION", "PARE-VAPEUR", "PAX", "SOKLE PARE-VAPEUR",
         "SOUS CARRELAGE", "BRICOL PARE-VAPEUR", "ELASTOTEK SAUPOUDRAGE", "BRICOL Cheminée"
+    ],
+    "materiaux": [
+        "ELASTOTEK",
+        "MORCEM DRY F",
+        "MORCEM DRY SF",
+        "EPOTEK",
+        "FLINKOTE",
+        "FILTEK",
+        "ARMA TEK PP",
+        "TEKWELD SEA",
+        "QUARTEK",
+        "Primaire d'accrochage",
+        "PAX (Rouleau bitume)",
+        "Micro-béton B300",
+        "Silicone / Mastic joint",
+        "Autre"
     ]
 }
 
@@ -49,7 +65,10 @@ def charger_config():
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+                data = json.load(f)
+                if "materiaux" not in data:
+                    data["materiaux"] = CONFIG_DEFAUT["materiaux"]
+                return data
         except Exception:
             return CONFIG_DEFAUT
     return CONFIG_DEFAUT
@@ -74,13 +93,13 @@ config = charger_config()
 tab_saisie, tab_admin = st.tabs(["📲 Saisie Chantier", "📊 Tableau de Bord"])
 
 # -------------------------------------------------------------
-# ONGLET 1 : SAISIE CHANTIER
+# ONGLET 1 : SAISIE CHANTIER AVEC CONSOMMATION MATÉRIAUX
 # -------------------------------------------------------------
 with tab_saisie:
     st.markdown("""
         <div style='background-color: #0F766E; padding: 14px; border-radius: 12px; text-align: center; margin-bottom: 15px;'>
-            <h2 style='color: white; margin: 0; font-size: 20px;'>📱 Pointage & Photos Chantier</h2>
-            <p style='color: #CCFBF1; margin: 4px 0 0 0; font-size: 13px;'>Enregistrez l'avancement et les photos du jour</p>
+            <h2 style='color: white; margin: 0; font-size: 20px;'>📱 Pointage, Rendement & Consommation</h2>
+            <p style='color: #CCFBF1; margin: 4px 0 0 0; font-size: 13px;'>Renseignez les travaux, consommations et photos</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -110,6 +129,18 @@ with tab_saisie:
         with c_r2:
             unite = st.selectbox("Unité", ["m²", "ML", "U"])
 
+        # --- SECTION CONSOMMATION DES MATÉRIAUX ---
+        st.write("---")
+        st.markdown("### 🧪 Consommation des Matériaux")
+        mat_sel = st.selectbox("Produit / Matériau consommé", config["materiaux"])
+        
+        c_q1, c_q2 = st.columns([2, 1])
+        with c_q1:
+            qte_mat = st.number_input("Quantité consommée", min_value=0.0, step=1.0, format="%.2f")
+        with c_q2:
+            unite_mat = st.selectbox("Conditionnement", ["Seaux / Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "Cartouches"])
+
+        # --- SECTION PHOTOS ---
         st.write("---")
         st.markdown("### 📸 Photos du travail")
         photos_galerie = st.file_uploader(
@@ -118,10 +149,10 @@ with tab_saisie:
             accept_multiple_files=True
         )
 
-        legende = st.text_input("💬 Remarque / Observation", placeholder="Ex : Finition relevés d'angle...")
+        legende = st.text_input("💬 Remarque / Observation", placeholder="Ex : 2ème couche appliquée...")
 
         st.write("")
-        submitted = st.form_submit_button("🚀 ENVOYER LE RAPPORT", use_container_width=True)
+        submitted = st.form_submit_button("🚀 ENVOYER LE RAPPORT DU JOUR", use_container_width=True)
 
         if submitted:
             if not photos_galerie:
@@ -158,6 +189,9 @@ with tab_saisie:
                     "Phase": str(phase_travaux),
                     "Rendement": str(rendement),
                     "Unite": str(unite),
+                    "Materiau": str(mat_sel),
+                    "Qte_Consommee": str(qte_mat),
+                    "Unite_Materiau": str(unite_mat),
                     "Effectif": ", ".join(macons_presents),
                     "Nb_Ouvriers": len(macons_presents),
                     "Photos": "|".join(saved_files),
@@ -166,7 +200,11 @@ with tab_saisie:
                 }
 
                 df_entry = pd.DataFrame([nouvelle_ligne])
-                colonnes_ordre = ["Date", "Chantier", "Corps_d_etat", "Phase", "Rendement", "Unite", "Effectif", "Nb_Ouvriers", "Photos", "Nb_Photos", "Legende"]
+                colonnes_ordre = [
+                    "Date", "Chantier", "Corps_d_etat", "Phase", 
+                    "Rendement", "Unite", "Materiau", "Qte_Consommee", "Unite_Materiau",
+                    "Effectif", "Nb_Ouvriers", "Photos", "Nb_Photos", "Legende"
+                ]
                 df_entry = df_entry[colonnes_ordre]
 
                 if os.path.exists(CSV_FILE):
@@ -174,16 +212,16 @@ with tab_saisie:
                 else:
                     df_entry.to_csv(CSV_FILE, sep=';', index=False, encoding='utf-8-sig')
 
-                st.success(f"✅ Photos classées dans : 📁 {dossier_chantier} / 📅 {dossier_date}")
+                st.success(f"✅ Rapport enregistré ! Photos classées dans : 📁 {dossier_chantier} / 📅 {dossier_date}")
 
 # -------------------------------------------------------------
-# ONGLET 2 : TABLEAU DE BORD (TÉLÉCHARGEMENT PAR CHANTIER / PAR JOUR)
+# ONGLET 2 : TABLEAU DE BORD RESPONSABLE
 # -------------------------------------------------------------
 with tab_admin:
     st.markdown("""
         <div style='background-color: #1E293B; padding: 14px; border-radius: 12px; text-align: center; margin-bottom: 15px;'>
             <h2 style='color: white; margin: 0; font-size: 20px;'>📊 Tableau de Bord Chantier</h2>
-            <p style='color: #94A3B8; margin: 4px 0 0 0; font-size: 13px;'>Dossiers classés par chantier et par journée</p>
+            <p style='color: #94A3B8; margin: 4px 0 0 0; font-size: 13px;'>Suivi des rendements, consommations et photos</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -205,8 +243,6 @@ with tab_admin:
 
         st.write("---")
         st.markdown("### 📦 Télécharger les Photos")
-        st.caption("Chaque bouton télécharge une archive ZIP organisée en dossiers par journée (Date).")
-
         dossiers_chantiers = [d for d in os.listdir(PHOTOS_BASE_DIR) if os.path.isdir(os.path.join(PHOTOS_BASE_DIR, d))]
 
         if not dossiers_chantiers:
@@ -229,7 +265,7 @@ with tab_admin:
 
                     c_info, c_btn = st.columns([2, 1])
                     with c_info:
-                        st.markdown(f"📁 **{d_ch}** ({len(fichiers_total)} photos classées par date)")
+                        st.markdown(f"📁 **{d_ch}** ({len(fichiers_total)} photos par journée)")
                     with c_btn:
                         st.download_button(
                             label=f"⬇️ Télécharger ZIP",
@@ -244,7 +280,7 @@ with tab_admin:
         if df_all is not None and not df_all.empty:
             csv_bytes = df_all.to_csv(sep=';', index=False, encoding='utf-8-sig').encode('utf-8-sig')
             st.download_button(
-                label="📊 Télécharger Tout le Registre (Excel/CSV)",
+                label="📊 Télécharger Registre Cumulé (CSV)",
                 data=csv_bytes,
                 file_name="registre_chantier.csv",
                 mime="text/csv",
@@ -253,6 +289,7 @@ with tab_admin:
 
         st.write("---")
 
+        # Cartes détaillées avec Rendement & Consommation
         if df_all is not None and not df_all.empty and "Chantier" in df_all.columns:
             liste_projets = ["Tous les chantiers"] + list([c for c in df_all["Chantier"].dropna().unique() if not str(c).startswith("2026-")])
             f_proj = st.selectbox("🔍 Filtrer les fiches :", liste_projets)
@@ -265,6 +302,10 @@ with tab_admin:
                 if str(row.get("Chantier", "")).startswith("2026-"):
                     continue
 
+                mat_info = ""
+                if "Materiau" in row and pd.notna(row.get("Materiau")):
+                    mat_info = f"🧪 Consommation : <b>{row.get('Qte_Consommee', '')} {row.get('Unite_Materiau', '')}</b> de <b>{row.get('Materiau', '')}</b><br>"
+
                 with st.container():
                     st.markdown(f"""
                         <div style='background-color: #F8FAFC; border-left: 5px solid #0F766E; padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #E2E8F0;'>
@@ -275,7 +316,10 @@ with tab_admin:
                             <div style='margin-top: 5px;'>
                                 🛠️ {row.get("Corps_d_etat", "")} &nbsp;|&nbsp; 📏 <b>{row.get("Rendement", "")} {row.get("Unite", "")}</b>
                             </div>
-                            <div style='color: #64748B; font-size: 13px; margin-top: 3px;'>
+                            <div style='margin-top: 3px; font-size: 13px; color: #0369A1;'>
+                                {mat_info}
+                            </div>
+                            <div style='color: #64748B; font-size: 13px; margin-top: 2px;'>
                                 👷 {row.get("Effectif", "")}
                             </div>
                         </div>
