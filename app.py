@@ -54,12 +54,26 @@ def sauver_config(cfg):
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         json.dump(cfg, f, ensure_ascii=False, indent=2)
 
+def charger_donnees():
+    if not os.path.exists(CSV_FILE):
+        return None
+    try:
+        df = pd.read_csv(CSV_FILE, sep=';', encoding='utf-8-sig', on_bad_lines='skip')
+        return df
+    except Exception:
+        # En cas d'erreur de format ancien, on tente une lecture standard ou on ignore les mauvaises lignes
+        try:
+            df = pd.read_csv(CSV_FILE, encoding='utf-8-sig', on_bad_lines='skip')
+            return df
+        except Exception:
+            return None
+
 config = charger_config()
 
 tab_saisie, tab_admin = st.tabs(["📲 Saisie Terrain", "🔒 Espace Admin"])
 
 # -------------------------------------------------------------
-# ONGLET 1 : INTERFACE MOBILE ULTRA-SIMPLE POUR LES MAÇONS
+# ONGLET 1 : INTERFACE MOBILE POUR LES MAÇONS
 # -------------------------------------------------------------
 with tab_saisie:
     st.markdown("""
@@ -70,11 +84,9 @@ with tab_saisie:
     """, unsafe_allow_html=True)
 
     with st.form("form_mobile_chantier", clear_on_submit=True):
-        # 1. Date & Chantier
         date_jour = st.date_input("📅 Date du jour", value=date.today())
         chantier_sel = st.selectbox("🏢 Chantier", config["chantiers"])
 
-        # 2. Corps d'état
         tache_sel = st.selectbox("🛠️ Travail / Corps d'état", config["taches"])
         phase_travaux = st.selectbox("📌 Étape de réalisation", [
             "Pendant l'application / exécution",
@@ -85,14 +97,12 @@ with tab_saisie:
             "Autre"
         ])
 
-        # 3. Ouvriers présents
         macons_presents = st.multiselect(
             "👷 Ouvriers présents sur ce travail",
             config["macons"],
             placeholder="Touchez pour choisir..."
         )
 
-        # 4. Rendement
         c_r1, c_r2 = st.columns([2, 1])
         with c_r1:
             rendement = st.number_input("📏 Rendement réalisé", min_value=0.0, step=1.0, format="%.2f")
@@ -102,10 +112,8 @@ with tab_saisie:
         st.write("---")
         st.markdown("### 📸 Photos du travail")
         
-        # Option 1 : Caméra directe du smartphone
         photo_camera = st.camera_input("📷 Prendre une photo en direct avec la caméra")
 
-        # Option 2 : Galerie pour photos multiples
         photos_galerie = st.file_uploader(
             "📂 Ou importer des photos depuis la galerie",
             type=["jpg", "jpeg", "png"],
@@ -118,7 +126,6 @@ with tab_saisie:
         submitted = st.form_submit_button("🚀 ENVOYER LE RAPPORT DU JOUR", use_container_width=True)
 
         if submitted:
-            # Regroupement des photos reçues
             toutes_photos = []
             if photo_camera:
                 toutes_photos.append(photo_camera)
@@ -156,21 +163,21 @@ with tab_saisie:
                     "Unite": unite,
                     "Effectif": ", ".join(macons_presents),
                     "Nb_Ouvriers": len(macons_presents),
-                    "Photos": ";".join(noms_sauvegardes),
+                    "Photos": ",".join(noms_sauvegardes),
                     "Nb_Photos": len(noms_sauvegardes),
-                    "Legende": legende
+                    "Legende": legende.replace(";", " ")
                 }
 
                 df_entry = pd.DataFrame([nouvelle_ligne])
                 if os.path.exists(CSV_FILE):
-                    df_entry.to_csv(CSV_FILE, mode='a', header=False, index=False, encoding='utf-8-sig')
+                    df_entry.to_csv(CSV_FILE, sep=';', mode='a', header=False, index=False, encoding='utf-8-sig')
                 else:
-                    df_entry.to_csv(CSV_FILE, index=False, encoding='utf-8-sig')
+                    df_entry.to_csv(CSV_FILE, sep=';', index=False, encoding='utf-8-sig')
 
                 st.success(f"✅ {len(noms_sauvegardes)} photo(s) et métré enregistrés avec succès !")
 
 # -------------------------------------------------------------
-# ONGLET 2 : ESPACE ADMIN (ADAPTÉ SMARTPHONE)
+# ONGLET 2 : ESPACE ADMIN SÉCURISÉ
 # -------------------------------------------------------------
 with tab_admin:
     st.subheader("🔒 Espace Responsable")
@@ -180,7 +187,6 @@ with tab_admin:
         st.success("🔓 Accès déverrouillé.")
 
         st.markdown("### 📦 Téléchargements")
-        # 1. Télécharger le ZIP photos
         if st.button("🗂️ Préparer l'archive ZIP des photos", use_container_width=True):
             fichiers_disponibles = os.listdir(PHOTOS_DIR)
             if fichiers_disponibles:
@@ -201,10 +207,10 @@ with tab_admin:
             else:
                 st.warning("Aucune photo disponible.")
 
-        # 2. Télécharger le fichier Excel/CSV
-        if os.path.exists(CSV_FILE):
-            df_all = pd.read_csv(CSV_FILE, encoding='utf-8-sig')
-            csv_bytes = df_all.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
+        df_all = charger_donnees()
+
+        if df_all is not None and not df_all.empty:
+            csv_bytes = df_all.to_csv(sep=';', index=False, encoding='utf-8-sig').encode('utf-8-sig')
             st.download_button(
                 "📥 Télécharger le registre (Excel/CSV)",
                 csv_bytes,
@@ -213,22 +219,32 @@ with tab_admin:
                 use_container_width=True
             )
 
-        st.write("---")
-        st.markdown("### 🖼️ Dernières photos reçues")
-        if os.path.exists(CSV_FILE):
-            df_all = pd.read_csv(CSV_FILE, encoding='utf-8-sig')
+            st.write("---")
+            st.markdown("### 🖼️ Dernières photos reçues")
             for _, row in df_all.tail(5).iloc[::-1].iterrows():
-                st.write(f"**📍 {row['Chantier']} - {row['Corps_d_etat']}** ({row['Date']})")
-                st.caption(f"Rendement : {row['Rendement']} {row['Unite']} | 👷 {row['Effectif']}")
-                fichiers = str(row['Photos']).split(";")
+                st.write(f"**📍 {row.get('Chantier', '')} - {row.get('Corps_d_etat', '')}** ({row.get('Date', '')})")
+                st.caption(f"Rendement : {row.get('Rendement', '')} {row.get('Unite', '')} | 👷 {row.get('Effectif', '')}")
+                photos_str = str(row.get('Photos', ''))
+                fichiers = photos_str.split(",") if "," in photos_str else photos_str.split(";")
                 for f_name in fichiers:
-                    chemin_f = os.path.join(PHOTOS_DIR, f_name)
+                    chemin_f = os.path.join(PHOTOS_DIR, f_name.strip())
                     if os.path.exists(chemin_f):
-                        img = Image.open(chemin_f)
-                        st.image(img, use_container_width=True)
+                        try:
+                            img = Image.open(chemin_f)
+                            st.image(img, use_container_width=True)
+                        except Exception:
+                            pass
                 st.write("---")
         else:
             st.info("Aucune saisie pour le moment.")
+
+        # Option pour effacer l'ancien fichier s'il est corrompu
+        st.write("---")
+        if st.button("🗑️ Réinitialiser le fichier CSV corrompu", help="Cliquez ici si le tableau affiche une erreur de lecture"):
+            if os.path.exists(CSV_FILE):
+                os.remove(CSV_FILE)
+                st.success("Fichier CSV réinitialisé avec succès.")
+                st.rerun()
 
     elif pin != "":
         st.error("❌ Code incorrect.")
