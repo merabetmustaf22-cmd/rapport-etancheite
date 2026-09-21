@@ -18,37 +18,36 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- THEME CONTRASTE ÉLEVÉ : CASES EN BLANC & ZERO TEXTE GRIS ---
+# --- THEME HAUTE LISIBILITÉ : CASES BLANCHES & TOUS LES BOUTONS VÉRIFIÉS ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
     html, body, [class*="css"] {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
-    /* Fond principal sombre élégant */
+    /* Fond d'application sombre élégant */
     .stApp {
         background-color: #0B1120 !important;
     }
 
-    /* ZERO TEXTE GRIS : TOUT EN BLANC PUR */
+    /* TOUS LES TEXTES ET TITRES EN BLANC PUR */
     p, span, div, label, caption, small, .stMarkdown p, .stCaption p {
         color: #FFFFFF !important;
     }
-
     h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5 {
         color: #FFFFFF !important;
         font-weight: 800 !important;
     }
 
-    /* LES CASES EN BLANC (INPUTS, SELECTS, DATE, NUMBER) */
+    /* CASES DE FORMULAIRE (FOND BLANC ÉCLATANT & TEXTE FONCÉ) */
     .stTextInput input, .stDateInput input, .stNumberInput input {
         background-color: #FFFFFF !important;
         color: #0F172A !important;
         font-size: 16px !important;
         font-weight: 700 !important;
-        border: 2px solid #E2E8F0 !important;
+        border: 2px solid #CBD5E1 !important;
         border-radius: 10px !important;
         padding: 10px !important;
     }
@@ -56,7 +55,7 @@ st.markdown("""
         background-color: #FFFFFF !important;
         color: #0F172A !important;
         font-weight: 700 !important;
-        border: 2px solid #E2E8F0 !important;
+        border: 2px solid #CBD5E1 !important;
         border-radius: 10px !important;
     }
     .stSelectbox div[data-baseweb="select"] * {
@@ -65,7 +64,7 @@ st.markdown("""
     }
     .stMultiSelect div[data-baseweb="select"] {
         background-color: #FFFFFF !important;
-        border: 2px solid #E2E8F0 !important;
+        border: 2px solid #CBD5E1 !important;
         border-radius: 10px !important;
     }
     .stMultiSelect [data-baseweb="tag"] {
@@ -77,7 +76,7 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* METRIQUES / CHIFFRES SUPER VISIBLES (PLUS DE GRIS) */
+    /* CHIFFRES STATISTIQUES / KPI */
     [data-testid="stMetricValue"] {
         color: #FFFFFF !important;
         font-size: 36px !important;
@@ -86,6 +85,82 @@ st.markdown("""
     [data-testid="stMetricLabel"] p {
         color: #38BDF8 !important;
         font-size: 16px !important;
+        font-weight: 800 !important;
+    }
+
+    /* ------------------------------------------------------------- */
+    /* VÉRIFICATION & STYLISATION COMPLÈTE DE TOUS LES BOUTONS       */
+    /* ------------------------------------------------------------- */
+
+    /* 1. Boutons classiques secondaires (Ajout matériau, etc.) */
+    div.stButton > button {
+        background-color: #0284C7 !important;
+        color: #FFFFFF !important;
+        font-size: 15px !important;
+        font-weight: 800 !important;
+        border-radius: 10px !important;
+        border: none !important;
+        padding: 12px 18px !important;
+        box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3) !important;
+        transition: all 0.2s ease !important;
+    }
+    div.stButton > button:hover {
+        background-color: #0369A1 !important;
+        transform: translateY(-1px) !important;
+    }
+    div.stButton > button * {
+        color: #FFFFFF !important;
+        font-weight: 800 !important;
+    }
+
+    /* 2. Boutons de suppression spécifiques */
+    .btn-supprimer button {
+        background-color: #DC2626 !important;
+        color: #FFFFFF !important;
+        border: none !important;
+        padding: 8px 12px !important;
+        font-size: 13px !important;
+        font-weight: 800 !important;
+        box-shadow: 0 2px 6px rgba(220, 38, 38, 0.3) !important;
+    }
+    .btn-supprimer button:hover {
+        background-color: #B91C1C !important;
+    }
+
+    /* 3. Bouton vert principal d'envoi */
+    .btn-valider button {
+        background: linear-gradient(135deg, #059669 0%, #10B981 100%) !important;
+        color: #FFFFFF !important;
+        font-size: 18px !important;
+        font-weight: 800 !important;
+        border-radius: 12px !important;
+        border: none !important;
+        padding: 16px !important;
+        width: 100% !important;
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4) !important;
+    }
+    .btn-valider button:hover {
+        background: linear-gradient(135deg, #047857 0%, #059669 100%) !important;
+        transform: translateY(-2px) !important;
+    }
+
+    /* 4. Boutons de téléchargement (Excel & ZIP) : Fond blanc + Texte noir gras */
+    div.stDownloadButton > button {
+        background-color: #FFFFFF !important;
+        color: #0F172A !important;
+        font-size: 15px !important;
+        font-weight: 800 !important;
+        border-radius: 10px !important;
+        border: 2px solid #CBD5E1 !important;
+        padding: 12px 20px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+    }
+    div.stDownloadButton > button:hover {
+        background-color: #F8FAFC !important;
+        border-color: #94A3B8 !important;
+    }
+    div.stDownloadButton > button * {
+        color: #0F172A !important;
         font-weight: 800 !important;
     }
 
@@ -100,7 +175,7 @@ st.markdown("""
     }
     .header-title {
         font-size: 26px;
-        font-weight: 800;
+        font-weight: 900;
         margin: 0;
         color: #FFFFFF !important;
     }
@@ -118,27 +193,6 @@ st.markdown("""
         border-radius: 8px;
         font-size: 13px;
         font-weight: 800;
-    }
-
-    /* Boutons en blanc propre et vert éclatant */
-    .btn-valider button {
-        background: linear-gradient(135deg, #059669 0%, #10B981 100%) !important;
-        color: #FFFFFF !important;
-        font-size: 17px !important;
-        font-weight: 800 !important;
-        border-radius: 12px !important;
-        border: none !important;
-        padding: 16px !important;
-        width: 100% !important;
-        box-shadow: 0 6px 18px rgba(16, 185, 129, 0.4) !important;
-    }
-    div.stDownloadButton > button {
-        background-color: #FFFFFF !important;
-        color: #0F172A !important;
-        font-weight: 800 !important;
-        border-radius: 10px !important;
-        border: none !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.2) !important;
     }
 
     /* Cartes des interventions */
@@ -197,7 +251,7 @@ st.markdown("""
         margin: 3px 4px 3px 0;
     }
 
-    /* Onglets */
+    /* Onglets de navigation */
     .stTabs [data-baseweb="tab-list"] {
         gap: 12px;
     }
@@ -407,7 +461,7 @@ if "liste_consommations" not in st.session_state:
 tab_saisie, tab_admin = st.tabs(["📲 Saisie Terrain", "📊 Espace Encadrement & Rapports"])
 
 # -------------------------------------------------------------
-# ONGLET 1 : SAISIE TERRAIN (CASES BLANCHES & ZERO GRIS)
+# ONGLET 1 : SAISIE TERRAIN
 # -------------------------------------------------------------
 with tab_saisie:
     st.markdown("""
@@ -459,9 +513,11 @@ with tab_saisie:
             with col_txt:
                 st.markdown(f"<span class='tag-materiau'>📦 {item['produit']} : <b>{item['quantite']} {item['unite']}</b></span>", unsafe_allow_html=True)
             with col_sup:
+                st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
                 if st.button("Supprimer", key=f"del_{idx_c}"):
                     st.session_state.liste_consommations.pop(idx_c)
                     st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
     with st.expander("➕ Enregistrer un matériau consommé", expanded=True):
         cp1, cp2, cp3 = st.columns([2, 1, 1])
@@ -472,7 +528,7 @@ with tab_saisie:
         with cp3:
             nouvelle_uni = st.selectbox("Conditionnement", ["Seaux/Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "Cartouches", "U"], key="ajout_uni")
 
-        if st.button("Ajouter le produit au registre", use_container_width=True):
+        if st.button("➕ Ajouter le produit au registre", use_container_width=True):
             if nouvelle_qte > 0:
                 st.session_state.liste_consommations.append({
                     "produit": nouveau_mat,
@@ -560,7 +616,7 @@ with tab_saisie:
                 st.error(f"❌ Erreur de transmission : {e}")
 
 # -------------------------------------------------------------
-# ONGLET 2 : ESPACE CADRE & DIRECTION (CONTRASTE ÉCLATANT)
+# ONGLET 2 : ESPACE CADRE & DIRECTION
 # -------------------------------------------------------------
 with tab_admin:
     st.markdown("""
@@ -586,7 +642,7 @@ with tab_admin:
         for root, _, files in os.walk(PHOTOS_BASE_DIR):
             total_photos += len([f for f in files if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
 
-        # Cartes KPI avec chiffres éclatants
+        # Cartes KPI
         kpi1, kpi2, kpi3 = st.columns(3)
         with kpi1:
             st.metric("Rapports Validés", f"{len(df_all) if df_all is not None else 0}")
