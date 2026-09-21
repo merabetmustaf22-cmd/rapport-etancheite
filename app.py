@@ -18,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- THEME HAUTE LISIBILITÉ : CASES BLANCHES & TOUS LES BOUTONS VÉRIFIÉS ---
+# --- CSS RÉPARÉ : AUCUN TEXTE BLANC SUR BLANC ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -27,36 +27,37 @@ st.markdown("""
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
-    /* Fond d'application sombre élégant */
+    /* Fond d'application sombre */
     .stApp {
         background-color: #0B1120 !important;
     }
 
-    /* TOUS LES TEXTES ET TITRES EN BLANC PUR */
-    p, span, div, label, caption, small, .stMarkdown p, .stCaption p {
-        color: #FFFFFF !important;
-    }
+    /* Titres généraux en blanc pur */
     h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5 {
         color: #FFFFFF !important;
         font-weight: 800 !important;
     }
 
-    /* CASES DE FORMULAIRE (FOND BLANC ÉCLATANT & TEXTE FONCÉ) */
+    /* Labels au-dessus des champs en blanc très lisible */
+    .stWidgetLabel p, [data-testid="stWidgetLabel"] p, label p {
+        color: #FFFFFF !important;
+        font-size: 15px !important;
+        font-weight: 700 !important;
+    }
+
+    /* Cases de formulaire (fond blanc + texte noir foncé) */
     .stTextInput input, .stDateInput input, .stNumberInput input {
         background-color: #FFFFFF !important;
         color: #0F172A !important;
-        font-size: 16px !important;
+        font-size: 15px !important;
         font-weight: 700 !important;
         border: 2px solid #CBD5E1 !important;
-        border-radius: 10px !important;
-        padding: 10px !important;
+        border-radius: 8px !important;
     }
     .stSelectbox div[data-baseweb="select"] {
         background-color: #FFFFFF !important;
-        color: #0F172A !important;
-        font-weight: 700 !important;
         border: 2px solid #CBD5E1 !important;
-        border-radius: 10px !important;
+        border-radius: 8px !important;
     }
     .stSelectbox div[data-baseweb="select"] * {
         color: #0F172A !important;
@@ -65,18 +66,57 @@ st.markdown("""
     .stMultiSelect div[data-baseweb="select"] {
         background-color: #FFFFFF !important;
         border: 2px solid #CBD5E1 !important;
-        border-radius: 10px !important;
+        border-radius: 8px !important;
     }
     .stMultiSelect [data-baseweb="tag"] {
         background-color: #0F766E !important;
         color: #FFFFFF !important;
         font-weight: 700 !important;
     }
-    .stMultiSelect [data-baseweb="tag"] * {
+
+    /* --- CORRECTION 1 : MENUS DÉROULANTS (POPUP / DROPDOWN) --- */
+    div[data-baseweb="popover"], ul[role="listbox"], li[role="option"] {
+        background-color: #FFFFFF !important;
+    }
+    div[data-baseweb="popover"] *, ul[role="listbox"] *, li[role="option"] * {
+        color: #0F172A !important;
+        font-weight: 700 !important;
+    }
+    li[role="option"]:hover {
+        background-color: #E2E8F0 !important;
+    }
+
+    /* --- CORRECTION 2 : CALENDRIER DATEPICKER --- */
+    div[data-baseweb="calendar"], div[data-baseweb="calendar"] * {
+        color: #0F172A !important;
+        font-weight: 700 !important;
+    }
+    div[data-baseweb="calendar"] button[aria-selected="true"] {
+        background-color: #0F766E !important;
         color: #FFFFFF !important;
     }
 
-    /* CHIFFRES STATISTIQUES / KPI */
+    /* --- CORRECTION 3 : SÉLECTEUR DE PHOTOS (FILE UPLOADER) --- */
+    [data-testid="stFileUploader"] section {
+        background-color: #FFFFFF !important;
+        border: 2px dashed #94A3B8 !important;
+        border-radius: 10px !important;
+        padding: 14px !important;
+    }
+    [data-testid="stFileUploader"] section * {
+        color: #0F172A !important;
+        font-weight: 700 !important;
+    }
+    [data-testid="stFileUploader"] section button {
+        background-color: #0284C7 !important;
+        border: none !important;
+    }
+    [data-testid="stFileUploader"] section button * {
+        color: #FFFFFF !important;
+        font-weight: 700 !important;
+    }
+
+    /* Indicateurs KPI */
     [data-testid="stMetricValue"] {
         color: #FFFFFF !important;
         font-size: 36px !important;
@@ -88,11 +128,7 @@ st.markdown("""
         font-weight: 800 !important;
     }
 
-    /* ------------------------------------------------------------- */
-    /* VÉRIFICATION & STYLISATION COMPLÈTE DE TOUS LES BOUTONS       */
-    /* ------------------------------------------------------------- */
-
-    /* 1. Boutons classiques secondaires (Ajout matériau, etc.) */
+    /* Boutons standards */
     div.stButton > button {
         background-color: #0284C7 !important;
         color: #FFFFFF !important;
@@ -102,32 +138,20 @@ st.markdown("""
         border: none !important;
         padding: 12px 18px !important;
         box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3) !important;
-        transition: all 0.2s ease !important;
-    }
-    div.stButton > button:hover {
-        background-color: #0369A1 !important;
-        transform: translateY(-1px) !important;
     }
     div.stButton > button * {
         color: #FFFFFF !important;
         font-weight: 800 !important;
     }
 
-    /* 2. Boutons de suppression spécifiques */
     .btn-supprimer button {
         background-color: #DC2626 !important;
         color: #FFFFFF !important;
-        border: none !important;
         padding: 8px 12px !important;
         font-size: 13px !important;
         font-weight: 800 !important;
-        box-shadow: 0 2px 6px rgba(220, 38, 38, 0.3) !important;
-    }
-    .btn-supprimer button:hover {
-        background-color: #B91C1C !important;
     }
 
-    /* 3. Bouton vert principal d'envoi */
     .btn-valider button {
         background: linear-gradient(135deg, #059669 0%, #10B981 100%) !important;
         color: #FFFFFF !important;
@@ -139,12 +163,8 @@ st.markdown("""
         width: 100% !important;
         box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4) !important;
     }
-    .btn-valider button:hover {
-        background: linear-gradient(135deg, #047857 0%, #059669 100%) !important;
-        transform: translateY(-2px) !important;
-    }
 
-    /* 4. Boutons de téléchargement (Excel & ZIP) : Fond blanc + Texte noir gras */
+    /* Boutons de téléchargement */
     div.stDownloadButton > button {
         background-color: #FFFFFF !important;
         color: #0F172A !important;
@@ -155,16 +175,12 @@ st.markdown("""
         padding: 12px 20px !important;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
     }
-    div.stDownloadButton > button:hover {
-        background-color: #F8FAFC !important;
-        border-color: #94A3B8 !important;
-    }
     div.stDownloadButton > button * {
         color: #0F172A !important;
         font-weight: 800 !important;
     }
 
-    /* Header principal */
+    /* En-tête */
     .header-cadre {
         background-color: #0F172A;
         border-radius: 16px;
@@ -251,7 +267,7 @@ st.markdown("""
         margin: 3px 4px 3px 0;
     }
 
-    /* Onglets de navigation */
+    /* Onglets */
     .stTabs [data-baseweb="tab-list"] {
         gap: 12px;
     }
