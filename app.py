@@ -18,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- THEME DARK EXECUTIVE AVEC TITRES EN BLANC PUR ---
+# --- THEME CONTRASTE ÉLEVÉ : CASES EN BLANC & ZERO TEXTE GRIS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -32,102 +32,95 @@ st.markdown("""
         background-color: #0B1120 !important;
     }
 
-    /* TOUS LES TITRES EN BLANC BRILLANT ET BIEN VISIBLES */
+    /* ZERO TEXTE GRIS : TOUT EN BLANC PUR */
+    p, span, div, label, caption, small, .stMarkdown p, .stCaption p {
+        color: #FFFFFF !important;
+    }
+
     h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5 {
         color: #FFFFFF !important;
         font-weight: 800 !important;
-        letter-spacing: -0.3px !important;
     }
 
-    /* TOUS LES LABELS DES CHAMPS EN BLANC BIEN VISIBLE */
-    label, .stWidgetLabel p, [data-testid="stWidgetLabel"] p {
-        color: #F8FAFC !important;
-        font-size: 15px !important;
-        font-weight: 600 !important;
-    }
-
-    /* Onglets de navigation */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 12px;
-        background-color: transparent;
-    }
-    .stTabs [data-baseweb="tab"] {
-        height: 48px;
-        background-color: #1E293B;
-        border-radius: 10px 10px 0px 0px;
-        color: #CBD5E1 !important;
-        font-weight: 700;
-        font-size: 15px;
-        border: 1px solid #334155;
-        border-bottom: none;
-        padding: 8px 20px;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #0F172A !important;
-        color: #38BDF8 !important;
-        border-top: 3px solid #38BDF8 !important;
-    }
-
-    /* Champs de saisie (Inputs) */
+    /* LES CASES EN BLANC (INPUTS, SELECTS, DATE, NUMBER) */
     .stTextInput input, .stDateInput input, .stNumberInput input {
-        background-color: #1E293B !important;
-        color: #FFFFFF !important;
-        border: 1px solid #475569 !important;
-        border-radius: 8px !important;
-        font-weight: 500 !important;
+        background-color: #FFFFFF !important;
+        color: #0F172A !important;
+        font-size: 16px !important;
+        font-weight: 700 !important;
+        border: 2px solid #E2E8F0 !important;
+        border-radius: 10px !important;
+        padding: 10px !important;
     }
     .stSelectbox div[data-baseweb="select"] {
-        background-color: #1E293B !important;
-        color: #FFFFFF !important;
-        border: 1px solid #475569 !important;
-        border-radius: 8px !important;
+        background-color: #FFFFFF !important;
+        color: #0F172A !important;
+        font-weight: 700 !important;
+        border: 2px solid #E2E8F0 !important;
+        border-radius: 10px !important;
+    }
+    .stSelectbox div[data-baseweb="select"] * {
+        color: #0F172A !important;
+        font-weight: 700 !important;
     }
     .stMultiSelect div[data-baseweb="select"] {
-        background-color: #1E293B !important;
-        border: 1px solid #475569 !important;
-        border-radius: 8px !important;
+        background-color: #FFFFFF !important;
+        border: 2px solid #E2E8F0 !important;
+        border-radius: 10px !important;
     }
     .stMultiSelect [data-baseweb="tag"] {
         background-color: #0F766E !important;
         color: #FFFFFF !important;
-        font-weight: 600 !important;
+        font-weight: 700 !important;
+    }
+    .stMultiSelect [data-baseweb="tag"] * {
+        color: #FFFFFF !important;
     }
 
-    /* Bannière Header Dark Executive */
+    /* METRIQUES / CHIFFRES SUPER VISIBLES (PLUS DE GRIS) */
+    [data-testid="stMetricValue"] {
+        color: #FFFFFF !important;
+        font-size: 36px !important;
+        font-weight: 900 !important;
+    }
+    [data-testid="stMetricLabel"] p {
+        color: #38BDF8 !important;
+        font-size: 16px !important;
+        font-weight: 800 !important;
+    }
+
+    /* Header principal */
     .header-cadre {
         background-color: #0F172A;
         border-radius: 16px;
         padding: 24px;
-        color: #FFFFFF;
         box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.6);
         margin-bottom: 22px;
-        border: 1px solid #1E293B;
+        border: 1px solid #334155;
     }
     .header-title {
-        font-size: 24px;
+        font-size: 26px;
         font-weight: 800;
-        letter-spacing: -0.5px;
         margin: 0;
         color: #FFFFFF !important;
     }
     .header-sub {
-        font-size: 13px;
-        color: #94A3B8 !important;
+        font-size: 14px;
+        color: #38BDF8 !important;
         margin-top: 6px;
-        font-weight: 500;
+        font-weight: 600;
     }
     .badge-pro {
-        background: rgba(13, 148, 136, 0.2);
-        border: 1px solid #0D9488;
-        color: #2DD4BF;
-        padding: 6px 12px;
+        background: rgba(13, 148, 136, 0.3);
+        border: 1px solid #14B8A6;
+        color: #5EEAD4 !important;
+        padding: 6px 14px;
         border-radius: 8px;
-        font-size: 12px;
+        font-size: 13px;
         font-weight: 800;
-        letter-spacing: 0.5px;
     }
 
-    /* Gros bouton vert d'envoi */
+    /* Boutons en blanc propre et vert éclatant */
     .btn-valider button {
         background: linear-gradient(135deg, #059669 0%, #10B981 100%) !important;
         color: #FFFFFF !important;
@@ -139,79 +132,91 @@ st.markdown("""
         width: 100% !important;
         box-shadow: 0 6px 18px rgba(16, 185, 129, 0.4) !important;
     }
-    .btn-valider button:hover {
-        background: linear-gradient(135deg, #047857 0%, #059669 100%) !important;
+    div.stDownloadButton > button {
+        background-color: #FFFFFF !important;
+        color: #0F172A !important;
+        font-weight: 800 !important;
+        border-radius: 10px !important;
+        border: none !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2) !important;
     }
 
-    /* Cartes de rapport dans l'admin */
+    /* Cartes des interventions */
     .card-intervention {
         background-color: #111827;
         border-radius: 14px;
-        border: 1px solid #1E293B;
+        border: 1px solid #334155;
         padding: 18px;
         margin-bottom: 18px;
-        border-left: 5px solid #0D9488;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    }
-    .card-header-flex {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid #1E293B;
-        padding-bottom: 10px;
-        margin-bottom: 12px;
+        border-left: 6px solid #10B981;
     }
     .tag-projet {
-        font-size: 16px;
-        font-weight: 800;
+        font-size: 17px;
+        font-weight: 900;
         color: #FFFFFF !important;
     }
     .tag-date {
-        font-size: 12px;
-        font-weight: 600;
-        color: #CBD5E1;
+        font-size: 13px;
+        font-weight: 700;
+        color: #FFFFFF !important;
         background: #1E293B;
-        padding: 4px 8px;
+        padding: 4px 10px;
         border-radius: 6px;
-        border: 1px solid #334155;
+        border: 1px solid #475569;
     }
     .tag-corps {
         display: inline-block;
         background-color: #1E293B;
         color: #FFFFFF !important;
         border: 1px solid #475569;
-        padding: 4px 10px;
+        padding: 5px 12px;
         border-radius: 6px;
-        font-size: 13px;
-        font-weight: 700;
+        font-size: 14px;
+        font-weight: 800;
     }
     .tag-rendement {
         display: inline-block;
-        background-color: rgba(13, 148, 136, 0.25);
-        color: #5EEAD4 !important;
-        border: 1px solid #0D9488;
-        padding: 4px 10px;
+        background-color: #064E3B;
+        color: #6EE7B7 !important;
+        border: 1px solid #059669;
+        padding: 5px 12px;
         border-radius: 6px;
-        font-size: 13px;
-        font-weight: 800;
+        font-size: 14px;
+        font-weight: 900;
         margin-left: 6px;
     }
     .tag-materiau {
         display: inline-block;
-        background-color: #0F172A;
-        color: #38BDF8 !important;
+        background-color: #082F49;
+        color: #7DD3FC !important;
         border: 1px solid #0284C7;
-        padding: 4px 9px;
+        padding: 5px 10px;
         border-radius: 6px;
-        font-size: 12px;
-        font-weight: 700;
+        font-size: 13px;
+        font-weight: 800;
         margin: 3px 4px 3px 0;
     }
 
-    /* Séparateurs nets */
+    /* Onglets */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 12px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 48px;
+        background-color: #1E293B;
+        border-radius: 10px 10px 0px 0px;
+        color: #FFFFFF !important;
+        font-weight: 800;
+        border: 1px solid #334155;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #0F172A !important;
+        color: #38BDF8 !important;
+        border-top: 3px solid #38BDF8 !important;
+    }
     hr {
         border-color: #334155 !important;
-        margin: 20px 0 !important;
+        margin: 24px 0 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -402,7 +407,7 @@ if "liste_consommations" not in st.session_state:
 tab_saisie, tab_admin = st.tabs(["📲 Saisie Terrain", "📊 Espace Encadrement & Rapports"])
 
 # -------------------------------------------------------------
-# ONGLET 1 : SAISIE TERRAIN (TITRES EN BLANC PUR)
+# ONGLET 1 : SAISIE TERRAIN (CASES BLANCHES & ZERO GRIS)
 # -------------------------------------------------------------
 with tab_saisie:
     st.markdown("""
@@ -555,7 +560,7 @@ with tab_saisie:
                 st.error(f"❌ Erreur de transmission : {e}")
 
 # -------------------------------------------------------------
-# ONGLET 2 : ESPACE CADRE & DIRECTION (TITRES EN BLANC PUR)
+# ONGLET 2 : ESPACE CADRE & DIRECTION (CONTRASTE ÉCLATANT)
 # -------------------------------------------------------------
 with tab_admin:
     st.markdown("""
@@ -581,7 +586,7 @@ with tab_admin:
         for root, _, files in os.walk(PHOTOS_BASE_DIR):
             total_photos += len([f for f in files if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
 
-        # Cartes KPI
+        # Cartes KPI avec chiffres éclatants
         kpi1, kpi2, kpi3 = st.columns(3)
         with kpi1:
             st.metric("Rapports Validés", f"{len(df_all) if df_all is not None else 0}")
@@ -609,7 +614,7 @@ with tab_admin:
                 st.button("Export Excel (En attente de données)", disabled=True, use_container_width=True)
 
         with c_exp2:
-            st.caption("Le classeur inclut : Synthèse des surfaces, ratios de consommation, pointage des équipes et journal brut d'exécution.")
+            st.markdown("<p style='color: #FFFFFF !important; font-size: 14px; font-weight: 500;'>Le classeur inclut : Synthèse des surfaces, ratios de consommation, pointage des équipes et journal brut d'exécution.</p>", unsafe_allow_html=True)
 
         st.write("---")
         dossiers_chantiers = [d for d in os.listdir(PHOTOS_BASE_DIR) if os.path.isdir(os.path.join(PHOTOS_BASE_DIR, d))]
@@ -632,7 +637,7 @@ with tab_admin:
 
                     c_info, c_btn = st.columns([3, 1])
                     with c_info:
-                        st.markdown(f"**{d_ch}** — `{len(fichiers_total)} photos classées`")
+                        st.markdown(f"<p style='color: #FFFFFF !important; font-size: 16px; font-weight: 800; margin-top: 8px;'>📁 <b>{d_ch}</b> — <span style='background: #1E293B; color: #38BDF8 !important; padding: 3px 8px; border-radius: 6px; border: 1px solid #334155;'>{len(fichiers_total)} photos classées</span></p>", unsafe_allow_html=True)
                     with c_btn:
                         st.download_button(label=f"Télécharger ZIP", data=zip_buf.getvalue(), file_name=f"Photos_{d_ch}.zip", mime="application/zip", key=f"z_{d_ch}", use_container_width=True)
 
@@ -652,29 +657,29 @@ with tab_admin:
 
                 conso_val = str(row.get("Consommation", "")).strip()
                 if not conso_val or conso_val == "nan" or conso_val == "Aucun":
-                    badge_conso_html = "<span style='color: #64748B; font-size: 12px; font-style: italic;'>Aucune consommation déclarée</span>"
+                    badge_conso_html = "<span style='color: #94A3B8 !important; font-size: 13px; font-style: italic;'>Aucune consommation déclarée</span>"
                 else:
                     items_conso = conso_val.split(" | ")
                     badge_conso_html = "".join([f"<span class='tag-materiau'>🧪 {c}</span>" for c in items_conso])
 
                 st.markdown(f"""
                     <div class='card-intervention'>
-                        <div class='card-header-flex'>
+                        <div style='display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 12px;'>
                             <span class='tag-projet'>🏢 {row.get("Chantier", "")}</span>
                             <span class='tag-date'>📅 {row.get("Date", "")}</span>
                         </div>
-                        <div style='margin-bottom: 8px;'>
+                        <div style='margin-bottom: 10px;'>
                             <span class='tag-corps'>🛠️ {row.get("Corps_d_etat", "")}</span>
                             <span class='tag-rendement'>📏 {row.get("Rendement", "")} {row.get("Unite", "")}</span>
-                            <span style='margin-left: 8px; color: #94A3B8; font-size: 12px; font-weight: 500;'>Phase : {row.get("Phase", "")}</span>
+                            <span style='margin-left: 10px; color: #38BDF8 !important; font-size: 13px; font-weight: 700;'>Phase : {row.get("Phase", "")}</span>
                         </div>
-                        <div style='margin: 10px 0 6px 0;'>
+                        <div style='margin: 10px 0;'>
                             {badge_conso_html}
                         </div>
-                        <div style='color: #CBD5E1; font-size: 13px; margin-top: 6px;'>
+                        <div style='color: #FFFFFF !important; font-size: 14px; font-weight: 600; margin-top: 8px;'>
                             👷 <b>Effectif présent :</b> {row.get("Effectif", "")}
                         </div>
-                        <div style='color: #94A3B8; font-size: 13px; margin-top: 4px; font-style: italic;'>
+                        <div style='color: #E2E8F0 !important; font-size: 14px; margin-top: 6px; font-style: italic;'>
                             💬 <b>Note de chantier :</b> {row.get("Legende", "R.A.S")}
                         </div>
                     </div>
