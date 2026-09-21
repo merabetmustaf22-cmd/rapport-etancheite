@@ -6,6 +6,7 @@ import json
 import io
 import zipfile
 import re
+import shutil
 from PIL import Image
 
 st.set_page_config(page_title="Chantier & Suivi", page_icon="📱", layout="centered")
@@ -45,6 +46,26 @@ def clean_folder_name(name):
     clean = name.split('(')[0].strip()
     return re.sub(r'[^a-zA-Z0-9_-]', '_', clean)
 
+# --- AUTO-MIGRATION DES ANCIENNES PHOTOS VERS LEURS SOUS-DOSSIERS ---
+def ranger_photos_orphelines(chantiers_connus):
+    for item in os.listdir(PHOTOS_BASE_DIR):
+        item_path = os.path.join(PHOTOS_BASE_DIR, item)
+        if os.path.isfile(item_path) and item.lower().endswith(('.jpg', '.jpeg', '.png')):
+            # Trouver à quel chantier appartient cette photo
+            chantier_trouve = "Autre"
+            for ch in chantiers_connus:
+                ch_key = clean_folder_name(ch)
+                if ch_key.lower() in item.lower():
+                    chantier_trouve = ch_key
+                    break
+            
+            dossier_cible = os.path.join(PHOTOS_BASE_DIR, chantier_trouve)
+            os.makedirs(dossier_cible, exist_ok=True)
+            try:
+                shutil.move(item_path, os.path.join(dossier_cible, item))
+            except Exception:
+                pass
+
 def charger_config():
     if os.path.exists(CONFIG_FILE):
         try:
@@ -70,6 +91,7 @@ def charger_donnees():
         return None
 
 config = charger_config()
+ranger_photos_orphelines(config["chantiers"])
 
 tab_saisie, tab_admin = st.tabs(["📲 Saisie Chantier", "📊 Tableau de Bord"])
 
@@ -175,13 +197,13 @@ with tab_saisie:
                 st.success(f"✅ Photos enregistrées dans le dossier dédié : 📁 {dossier_chantier}")
 
 # -------------------------------------------------------------
-# ONGLET 2 : TABLEAU DE BORD RESPONSABLE
+# ONGLET 2 : TABLEAU DE BORD (TÉLÉCHARGEMENT STRICTEMENT SÉPARÉ)
 # -------------------------------------------------------------
 with tab_admin:
     st.markdown("""
         <div style='background-color: #1E293B; padding: 14px; border-radius: 12px; text-align: center; margin-bottom: 15px;'>
             <h2 style='color: white; margin: 0; font-size: 20px;'>📊 Tableau de Bord Chantier</h2>
-            <p style='color: #94A3B8; margin: 4px 0 0 0; font-size: 13px;'>Dossiers séparés par chantier</p>
+            <p style='color: #94A3B8; margin: 4px 0 0 0; font-size: 13px;'>Téléchargement séparé par dossier chantier</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -190,60 +212,82 @@ with tab_admin:
     if pin == ADMIN_PIN:
         df_all = charger_donnees()
         
-        # Scanner tous les dossiers réels existants
-        dossiers_dispos = [d for d in os.listdir(PHOTOS_BASE_DIR) if os.path.isdir(os.path.join(PHOTOS_BASE_DIR, d))]
+        st.markdown("### 📥 Télécharger les Photos par Chantier")
+        st.caption("Chaque bouton télécharge uniquement les photos du chantier sélectionné.")
 
-        st.markdown("### 📦 Télécharger les Dossiers Photos")
+        # Récupération de tous les dossiers chantiers existants
+        dossiers_existants = [d for d in os.listdir(PHOTOS_BASE_DIR) if os.path.isdir(os.path.join(PHOTOS_BASE_DIR, d))]
         
-        # Choix de téléchargement séparé
-        choix_dossier = st.selectbox("Sélectionnez le dossier à télécharger :", ["Tous les chantiers (ZIP avec dossiers séparés)"] + dossiers_dispos)
+        if not dossiers_existants:
+            st.info("Aucun dossier photo disponible pour l'instant.")
+        else:
+            for d_name in sorted(dossiers_existants):
+                target_dir = os.path.join(PHOTOS_BASE_DIR, d_name)
+                fichiers_chantier = [f for f in os.listdir(target_dir) if os.path.isfile(os.path.join(target_dir, f))]
+                
+                if fichiers_chantier:
+                    # Préparation de l'archive spécifique à ce chantier seul
+                    zip_buf = io.BytesIO()
+                    with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+                        for f in fichiers_chantier:
+                            zf.write(os.path.join(target_dir, f), arcname=f)
 
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            if choix_dossier == "Tous les chantiers (ZIP avec dossiers séparés)":
-                for root, _, files in os.walk(PHOTOS_BASE_DIR):
-                    for file in files:
-                        p_full = os.path.join(root, file)
-                        rel_path = os.path.relpath(p_full, PHOTOS_BASE_DIR)
-                        zip_file.write(p_full, arcname=rel_path)
-                nom_dl = f"chantiers_dossiers_separes_{date.today()}.zip"
-            else:
-                target_dir = os.path.join(PHOTOS_BASE_DIR, choix_dossier)
-                for file in os.listdir(target_dir):
-                    p_full = os.path.join(target_dir, file)
-                    if os.path.isfile(p_full):
-                        zip_file.write(p_full, arcname=f"{choix_dossier}/{file}")
-                nom_dl = f"{choix_dossier}_photos_{date.today()}.zip"
+                    col_info, col_dl = st.columns([2, 1])
+                    with col_info:
+                        st.markdown(f"📁 **{d_name}** ({len(fichiers_chantier)} photos)")
+                    with col_dl:
+                        st.download_button(
+                            label=f"⬇️ Télécharger ({d_name})",
+                            data=zip_buf.getvalue(),
+                            file_name=f"photos_{d_name}_{date.today()}.zip",
+                            mime="application/zip",
+                            key=f"dl_{d_name}",
+                            use_container_width=True
+                        )
 
-        st.download_button(
-            label=f"📥 Télécharger {choix_dossier}",
-            data=zip_buffer.getvalue(),
-            file_name=nom_dl,
-            mime="application/zip",
-            use_container_width=True
-        )
+        st.write("---")
+        # Téléchargement du registre Excel
+        if df_all is not None and not df_all.empty:
+            csv_bytes = df_all.to_csv(sep=';', index=False, encoding='utf-8-sig').encode('utf-8-sig')
+            st.download_button(
+                label="📊 Télécharger Tout le Registre (Excel/CSV)",
+                data=csv_bytes,
+                file_name="registre_chantier.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
 
         st.write("---")
 
-        # Affichage des photos
+        # --- AFFICHAGE DU FLUX DE CARTES & PHOTOS ---
         if df_all is not None and not df_all.empty and "Chantier" in df_all.columns:
-            liste_projets = ["Tous les chantiers"] + list([c for c in df_all["Chantier"].dropna().unique() if not str(c).startswith("2026-")])
-            f_proj = st.selectbox("🔍 Filtrer les fiches :", liste_projets)
+            chantiers_bruts = [c for c in df_all["Chantier"].dropna().unique() if not str(c).startswith("2026-")]
+            liste_projets = ["Tous les chantiers"] + list(chantiers_bruts)
+            f_proj = st.selectbox("🔍 Filtrer les fiches par chantier :", liste_projets)
 
             df_show = df_all.copy()
             if f_proj != "Tous les chantiers":
                 df_show = df_show[df_show["Chantier"] == f_proj]
 
+            st.write(f"Affichage de **{len(df_show)}** fiche(s) :")
+
             for _, row in df_show.iloc[::-1].iterrows():
-                if str(row.get("Chantier", "")).startswith("2026-"):
+                if str(row.get("Chantier", "")).startswith("2026-") or "nan" in str(row.get("Chantier", "")):
                     continue
 
                 with st.container():
                     st.markdown(f"""
                         <div style='background-color: #F8FAFC; border-left: 5px solid #0F766E; padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #E2E8F0;'>
-                            <b>🏢 {row.get("Chantier", "")}</b> &nbsp;|&nbsp; 📅 {row.get("Date", "")}<br>
-                            🛠️ {row.get("Corps_d_etat", "")} &nbsp;|&nbsp; 📏 <b>{row.get("Rendement", "")} {row.get("Unite", "")}</b><br>
-                            👷 {row.get("Effectif", "")}
+                            <div style='display: flex; justify-content: space-between;'>
+                                <b>🏢 {row.get("Chantier", "")}</b>
+                                <span style='color: #64748B;'>📅 {row.get("Date", "")}</span>
+                            </div>
+                            <div style='margin-top: 5px;'>
+                                🛠️ {row.get("Corps_d_etat", "")} &nbsp;|&nbsp; 📏 <b>{row.get("Rendement", "")} {row.get("Unite", "")}</b>
+                            </div>
+                            <div style='color: #64748B; font-size: 13px; margin-top: 3px;'>
+                                👷 {row.get("Effectif", "")}
+                            </div>
                         </div>
                     """, unsafe_allow_html=True)
 
@@ -251,7 +295,6 @@ with tab_admin:
                     valid_paths = []
                     for ph in raw_photos:
                         ph_clean = ph.strip()
-                        # Chercher fi sous-dossier wela direct
                         p_sub = os.path.join(PHOTOS_BASE_DIR, ph_clean)
                         p_root = os.path.join(PHOTOS_BASE_DIR, os.path.basename(ph_clean))
                         if os.path.exists(p_sub):
@@ -268,14 +311,12 @@ with tab_admin:
                                 pass
                     st.write("")
 
-        # Nettoyage
         with st.expander("⚙️ Options avancées"):
             if st.button("🗑️ Réinitialiser le registre CSV"):
                 if os.path.exists(CSV_FILE):
                     os.remove(CSV_FILE)
-                    st.success("CSV réinitialisé.")
+                    st.success("CSV nettoyé.")
                     st.rerun()
 
     elif pin != "":
-        st.error("❌ Code incorrect.")
-        
+        st.error("❌ Code secret incorrect.")
