@@ -7,7 +7,8 @@ import io
 import zipfile
 from PIL import Image
 
-st.set_page_config(page_title="Suivi Photos & Rendement Chantier", page_icon="📸", layout="wide")
+# Configuration écran vertical smartphone
+st.set_page_config(page_title="Chantier Mobile", page_icon="📱", layout="centered")
 
 PHOTOS_DIR = "photos_chantier"
 os.makedirs(PHOTOS_DIR, exist_ok=True)
@@ -55,70 +56,89 @@ def sauver_config(cfg):
 
 config = charger_config()
 
-tab_saisie, tab_admin = st.tabs(["📸 Prise & Envoi des Photos", "🔒 Galerie & Archive Admin"])
+tab_saisie, tab_admin = st.tabs(["📲 Saisie Terrain", "🔒 Espace Admin"])
 
 # -------------------------------------------------------------
-# ONGLET 1 : SAISIE TERRAIN ULTRA-CENTRÉE PHOTOS
+# ONGLET 1 : INTERFACE MOBILE ULTRA-SIMPLE POUR LES MAÇONS
 # -------------------------------------------------------------
 with tab_saisie:
     st.markdown("""
-        <div style='background-color: #0F766E; padding: 12px; border-radius: 8px; text-align: center;'>
-            <h2 style='color: white; margin: 0;'>📸 Journal Photos & Travaux de Chantier</h2>
-            <p style='color: #CCFBF1; margin: 0; font-size: 14px;'>Prenez les photos de l'avancement, indiquez le travail et envoyez direct</p>
+        <div style='background-color: #0F766E; padding: 14px; border-radius: 12px; text-align: center; margin-bottom: 15px;'>
+            <h2 style='color: white; margin: 0; font-size: 22px;'>📱 Pointage & Photos Chantier</h2>
+            <p style='color: #CCFBF1; margin: 5px 0 0 0; font-size: 13px;'>Remplissez les champs et envoyez vos photos</p>
         </div>
     """, unsafe_allow_html=True)
-    st.write("")
 
-    with st.form("form_photos_chantier", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            date_jour = st.date_input("📅 Date de prise de vue", value=date.today())
-            chantier_sel = st.selectbox("🏢 Chantier", config["chantiers"])
-        with col2:
-            tache_sel = st.selectbox("🛠️ Corps d'état concerné", config["taches"])
-            phase_travaux = st.selectbox("📌 Étape de la photo", [
-                "Pendant l'application / exécution",
-                "Avant travaux (État du support)",
-                "Après achèvement (Résultat final)",
-                "Détail technique / Finition / Gorge",
-                "Épreuve d'eau (Test d'étanchéité)",
-                "Autre"
-            ])
+    with st.form("form_mobile_chantier", clear_on_submit=True):
+        # 1. Date & Chantier
+        date_jour = st.date_input("📅 Date du jour", value=date.today())
+        chantier_sel = st.selectbox("🏢 Chantier", config["chantiers"])
 
-        col_m, col_r, col_u = st.columns([2, 1, 1])
-        with col_m:
-            macons_presents = st.multiselect("👷 Équipe présente", config["macons"])
-        with col_r:
+        # 2. Corps d'état
+        tache_sel = st.selectbox("🛠️ Travail / Corps d'état", config["taches"])
+        phase_travaux = st.selectbox("📌 Étape de réalisation", [
+            "Pendant l'application / exécution",
+            "Avant travaux (État du support)",
+            "Après achèvement (Finition)",
+            "Détail technique / Gorge / Relevé",
+            "Épreuve d'eau (Test d'étanchéité)",
+            "Autre"
+        ])
+
+        # 3. Ouvriers présents
+        macons_presents = st.multiselect(
+            "👷 Ouvriers présents sur ce travail",
+            config["macons"],
+            placeholder="Touchez pour choisir..."
+        )
+
+        # 4. Rendement
+        c_r1, c_r2 = st.columns([2, 1])
+        with c_r1:
             rendement = st.number_input("📏 Rendement réalisé", min_value=0.0, step=1.0, format="%.2f")
-        with col_u:
+        with c_r2:
             unite = st.selectbox("Unité", ["m²", "ML", "U"])
 
-        st.markdown("### 📷 Vos Photos")
-        photos_uploaded = st.file_uploader(
-            "Prenez les photos avec la caméra ou choisissez depuis la galerie (Plusieurs photos acceptées)",
+        st.write("---")
+        st.markdown("### 📸 Photos du travail")
+        
+        # Option 1 : Caméra directe du smartphone
+        photo_camera = st.camera_input("📷 Prendre une photo en direct avec la caméra")
+
+        # Option 2 : Galerie pour photos multiples
+        photos_galerie = st.file_uploader(
+            "📂 Ou importer des photos depuis la galerie",
             type=["jpg", "jpeg", "png"],
             accept_multiple_files=True
         )
 
-        legende = st.text_input("💬 Légende / Observation sur la photo", placeholder="Ex : Première couche Elastotek sur terrasse A...")
+        legende = st.text_input("💬 Remarque / Détail sur la photo", placeholder="Ex : Fin de première couche...")
 
-        submitted = st.form_submit_button("🚀 Envoyer & Sauvegarder les Photos", use_container_width=True)
+        st.write("")
+        submitted = st.form_submit_button("🚀 ENVOYER LE RAPPORT DU JOUR", use_container_width=True)
 
         if submitted:
-            if not photos_uploaded:
-                st.error("⚠️ Veuillez ajouter au moins une photo avant de valider.")
+            # Regroupement des photos reçues
+            toutes_photos = []
+            if photo_camera:
+                toutes_photos.append(photo_camera)
+            if photos_galerie:
+                toutes_photos.extend(photos_galerie)
+
+            if not toutes_photos:
+                st.error("⚠️ Veuillez ajouter au moins une photo (caméra ou galerie).")
             elif not macons_presents:
-                st.error("⚠️ Veuillez sélectionner au moins un ouvrier dans la liste.")
+                st.error("⚠️ Veuillez sélectionner au moins un ouvrier présent.")
             else:
                 noms_sauvegardes = []
                 chantier_clean = chantier_sel.split('(')[0].replace(" ", "_")
                 tache_clean = tache_sel.replace(" ", "_")[:12]
 
-                for idx, p in enumerate(photos_uploaded):
-                    extension = os.path.splitext(p.name)[1].lower()
-                    if extension not in [".jpg", ".jpeg", ".png"]:
-                        extension = ".jpg"
-                    
+                for idx, p in enumerate(toutes_photos):
+                    extension = ".jpg"
+                    if hasattr(p, "name") and os.path.splitext(p.name)[1]:
+                        extension = os.path.splitext(p.name)[1].lower()
+
                     nom_final = f"{date_jour}_{chantier_clean}_{tache_clean}_{idx+1}{extension}"
                     chemin_disque = os.path.join(PHOTOS_DIR, nom_final)
 
@@ -147,112 +167,68 @@ with tab_saisie:
                 else:
                     df_entry.to_csv(CSV_FILE, index=False, encoding='utf-8-sig')
 
-                st.success(f"✅ {len(noms_sauvegardes)} Photo(s) envoyée(s) et classée(s) avec succès !")
+                st.success(f"✅ {len(noms_sauvegardes)} photo(s) et métré enregistrés avec succès !")
 
 # -------------------------------------------------------------
-# ONGLET 2 : ESPACE ADMIN - GALERIE & TÉLÉCHARGEMENT ZIP
+# ONGLET 2 : ESPACE ADMIN (ADAPTÉ SMARTPHONE)
 # -------------------------------------------------------------
 with tab_admin:
     st.subheader("🔒 Espace Responsable")
-    pin = st.text_input("Code Administrateur :", type="password")
+    pin = st.text_input("Code Secret :", type="password")
 
     if pin == ADMIN_PIN:
-        st.success("🔓 Accès administrateur accordé.")
+        st.success("🔓 Accès déverrouillé.")
 
-        sous_onglets = st.tabs(["🖼️ Galerie Photos & Filtres", "📦 Télécharger ZIP Photos", "📋 Registre Chiffré", "⚙️ Configuration"])
-
-        # 1. GALERIE PHOTOS
-        with sous_onglets[0]:
-            st.markdown("### 🖼️ Galerie Photos de Chantier")
-            if os.path.exists(CSV_FILE):
-                df_global = pd.read_csv(CSV_FILE, encoding='utf-8-sig')
+        st.markdown("### 📦 Téléchargements")
+        # 1. Télécharger le ZIP photos
+        if st.button("🗂️ Préparer l'archive ZIP des photos", use_container_width=True):
+            fichiers_disponibles = os.listdir(PHOTOS_DIR)
+            if fichiers_disponibles:
+                zip_buffer = io.BytesIO()
+                with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+                    for photo in fichiers_disponibles:
+                        full_path = os.path.join(PHOTOS_DIR, photo)
+                        if os.path.isfile(full_path):
+                            zip_file.write(full_path, arcname=photo)
                 
-                col_f1, col_f2 = st.columns(2)
-                with col_f1:
-                    filtre_chantier = st.selectbox("Filtrer par Chantier :", ["Tous"] + list(df_global["Chantier"].unique()))
-                with col_f2:
-                    filtre_tache = st.selectbox("Filtrer par Corps d'état :", ["Toutes"] + list(df_global["Corps_d_etat"].unique()))
-
-                df_filtre = df_global.copy()
-                if filtre_chantier != "Tous":
-                    df_filtre = df_filtre[df_filtre["Chantier"] == filtre_chantier]
-                if filtre_tache != "Toutes":
-                    df_filtre = df_filtre[df_filtre["Corps_d_etat"] == filtre_tache]
-
-                st.write(f"Affichage de **{len(df_filtre)}** enregistrements :")
-
-                for _, row in df_filtre.iterrows():
-                    with st.expander(f"📍 {row['Chantier']} - {row['Corps_d_etat']} ({row['Date']}) | Rendement: {row['Rendement']} {row['Unite']}", expanded=True):
-                        st.caption(f"👷 Équipe: {row['Effectif']} | Étape: {row.get('Phase', '-')} | Observation: {row.get('Legende', '-')}")
-                        
-                        fichiers = str(row['Photos']).split(";")
-                        cols = st.columns(min(len(fichiers), 3))
-                        for i, f_name in enumerate(fichiers):
-                            chemin_f = os.path.join(PHOTOS_DIR, f_name)
-                            if os.path.exists(chemin_f):
-                                try:
-                                    img = Image.open(chemin_f)
-                                    cols[i % 3].image(img, caption=f_name, use_container_width=True)
-                                except:
-                                    cols[i % 3].write(f"Image introuvable : {f_name}")
+                st.download_button(
+                    label="📥 Télécharger le fichier ZIP",
+                    data=zip_buffer.getvalue(),
+                    file_name=f"photos_chantiers_{date.today()}.zip",
+                    mime="application/zip",
+                    use_container_width=True
+                )
             else:
-                st.info("Aucune photo enregistrée.")
+                st.warning("Aucune photo disponible.")
 
-        # 2. TÉLÉCHARGEMENT ZIP
-        with sous_onglets[1]:
-            st.markdown("### 📦 Télécharger toutes les photos d'un coup (Archive ZIP)")
-            st.write("Récupérez un fichier compressé (.zip) avec toutes les photos classées pour préparer vos rapports.")
+        # 2. Télécharger le fichier Excel/CSV
+        if os.path.exists(CSV_FILE):
+            df_all = pd.read_csv(CSV_FILE, encoding='utf-8-sig')
+            csv_bytes = df_all.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
+            st.download_button(
+                "📥 Télécharger le registre (Excel/CSV)",
+                csv_bytes,
+                "registre_chantier.csv",
+                "text/csv",
+                use_container_width=True
+            )
 
-            if st.button("🗂️ Générer le fichier ZIP de toutes les photos"):
-                fichiers_disponibles = os.listdir(PHOTOS_DIR)
-                if fichiers_disponibles:
-                    zip_buffer = io.BytesIO()
-                    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-                        for photo in fichiers_disponibles:
-                            full_path = os.path.join(PHOTOS_DIR, photo)
-                            if os.path.isfile(full_path):
-                                zip_file.write(full_path, arcname=photo)
-                    
-                    st.download_button(
-                        label="📥 Télécharger le dossier ZIP des photos",
-                        data=zip_buffer.getvalue(),
-                        file_name=f"photos_chantiers_{date.today()}.zip",
-                        mime="application/zip"
-                    )
-                else:
-                    st.warning("Aucun fichier photo dans le dossier.")
-
-        # 3. REGISTRE EXCEL
-        with sous_onglets[2]:
-            st.markdown("### 📋 Tableau de bord des rendements")
-            if os.path.exists(CSV_FILE):
-                df_all = pd.read_csv(CSV_FILE, encoding='utf-8-sig')
-                st.dataframe(df_all, use_container_width=True)
-                csv_bytes = df_all.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
-                st.download_button("📥 Télécharger le registre (Excel/CSV)", csv_bytes, "registre_chantier.csv", "text/csv")
-            else:
-                st.info("Aucune donnée.")
-
-        # 4. CONFIGURATION
-        with sous_onglets[3]:
-            st.markdown("### ⚙️ Gestion des listes")
-            st.write("**Chantiers :**", ", ".join(config["chantiers"]))
-            n_c = st.text_input("Ajouter Chantier")
-            if st.button("➕ Ajouter Chantier"):
-                if n_c.strip() and n_c.strip() not in config["chantiers"]:
-                    config["chantiers"].append(n_c.strip())
-                    sauver_config(config)
-                    st.rerun()
-
-            st.write("**Ouvriers :**", ", ".join(config["macons"]))
-            n_m = st.text_input("Ajouter Ouvrier")
-            if st.button("➕ Ajouter Ouvrier"):
-                if n_m.strip() and n_m.strip() not in config["macons"]:
-                    config["macons"].append(n_m.strip())
-                    sauver_config(config)
-                    st.rerun()
+        st.write("---")
+        st.markdown("### 🖼️ Dernières photos reçues")
+        if os.path.exists(CSV_FILE):
+            df_all = pd.read_csv(CSV_FILE, encoding='utf-8-sig')
+            for _, row in df_all.tail(5).iloc[::-1].iterrows():
+                st.write(f"**📍 {row['Chantier']} - {row['Corps_d_etat']}** ({row['Date']})")
+                st.caption(f"Rendement : {row['Rendement']} {row['Unite']} | 👷 {row['Effectif']}")
+                fichiers = str(row['Photos']).split(";")
+                for f_name in fichiers:
+                    chemin_f = os.path.join(PHOTOS_DIR, f_name)
+                    if os.path.exists(chemin_f):
+                        img = Image.open(chemin_f)
+                        st.image(img, use_container_width=True)
+                st.write("---")
+        else:
+            st.info("Aucune saisie pour le moment.")
 
     elif pin != "":
-        st.error("❌ Code secret incorrect.")
-    else:
-        st.info("Saisissez le code pour accéder à la galerie et aux téléchargements.")
+        st.error("❌ Code incorrect.")
