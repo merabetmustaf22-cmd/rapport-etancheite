@@ -13,7 +13,7 @@ from openpyxl.utils import get_column_letter
 
 st.set_page_config(page_title="Chantier & Suivi", page_icon="📱", layout="centered")
 
-# --- STYLE DU GROS BOUTON VERT D'ENVOI ---
+# --- STYLE DU GROS BOUTON VERT ---
 st.markdown("""
     <style>
     div.stButton > button {
@@ -45,6 +45,12 @@ os.makedirs(PHOTOS_BASE_DIR, exist_ok=True)
 CONFIG_FILE = "config_chantier.json"
 CSV_FILE = "suivi_journalier_chantiers.csv"
 ADMIN_PIN = "2026"
+
+COLONNES_OFFICIELLES = [
+    "Date", "Chantier", "Corps_d_etat", "Phase", 
+    "Rendement", "Unite", "Consommation",
+    "Effectif", "Nb_Ouvriers", "Photos", "Nb_Photos", "Legende"
+]
 
 CONFIG_DEFAUT = {
     "chantiers": [
@@ -106,9 +112,15 @@ def charger_donnees():
     if not os.path.exists(CSV_FILE):
         return None
     try:
+        # Lecture tolérante automatique
         df = pd.read_csv(CSV_FILE, sep=';', encoding='utf-8-sig', on_bad_lines='skip')
-        if len(df.columns) <= 1:
+        if len(df.columns) < 5:
             df = pd.read_csv(CSV_FILE, sep=',', encoding='utf-8-sig', on_bad_lines='skip')
+        
+        # Sécurité : s'assurer que toutes les colonnes existent
+        for c in COLONNES_OFFICIELLES:
+            if c not in df.columns:
+                df[c] = ""
         return df
     except Exception:
         return None
@@ -153,11 +165,11 @@ def generer_rapport_excel(df_source):
     ws1 = wb.create_sheet(title="Synthèse Chantiers")
     headers1 = ["Chantier", "Surface Réalisée (m²)", "Linéaire Réalisé (ML)", "Unités (U)", "Interventions"]
     ws1.append(headers1)
-    chantiers_uniques = [c for c in df_source["Chantier"].dropna().unique() if not str(c).startswith("2026-")]
+    chantiers_uniques = [c for c in df_source["Chantier"].dropna().unique() if not str(c).startswith("2026-") and str(c).strip()]
     for ch in sorted(chantiers_uniques):
         sub = df_source[df_source["Chantier"] == ch].copy()
         sub["Rendement_num"] = pd.to_numeric(sub.get("Rendement", 0), errors='coerce').fillna(0)
-        unite_col = sub.get("Unite", pd.Series([""] * len(sub)))
+        unite_col = sub.get("Unite", pd.Series([""] * len(sub))).astype(str)
         m2 = sub[unite_col.str.contains("m²", na=False)]["Rendement_num"].sum()
         ml = sub[unite_col.str.contains("ML", na=False)]["Rendement_num"].sum()
         u = sub[unite_col.str.contains("U", na=False)]["Rendement_num"].sum()
@@ -243,36 +255,27 @@ with tab_saisie:
     with c_r2:
         unite = st.selectbox("Unité", ["m²", "ML", "U"])
 
-    # --- SÉLECTION MULTI-PRODUITS AVEC QUANTITÉ & UNITÉ DÉDIÉES ---
     st.write("---")
     st.markdown("### 🧪 Matériaux Consommés")
     
     materiaux_utilises = st.multiselect(
         "Sélectionnez les produits utilisés aujourd'hui :",
         config["materiaux"],
-        placeholder="Touchez ici pour choisir un ou plusieurs matériaux..."
+        placeholder="Touchez pour choisir..."
     )
 
     consommations_detaillees = []
-
     if materiaux_utilises:
-        st.caption("Précisez la quantité et l'unité pour chaque produit sélectionné :")
         for idx, prod in enumerate(materiaux_utilises):
             st.markdown(f"**🔹 {prod}**")
             col_q, col_u = st.columns([2, 1])
             with col_q:
-                qte = st.number_input(
-                    f"Quantité ({prod})",
-                    min_value=0.0,
-                    step=1.0,
-                    format="%.2f",
-                    key=f"qte_input_{idx}_{prod}"
-                )
+                qte = st.number_input(f"Quantité ({prod})", min_value=0.0, step=1.0, format="%.2f", key=f"q_{idx}_{prod}")
             with col_u:
                 unite_cond = st.selectbox(
                     f"Unité ({prod})",
                     ["Seaux / Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "Cartouches", "U"],
-                    key=f"unite_input_{idx}_{prod}"
+                    key=f"u_{idx}_{prod}"
                 )
             if qte > 0:
                 consommations_detaillees.append(f"{prod}: {qte} {unite_cond}")
@@ -282,14 +285,13 @@ with tab_saisie:
     photos_galerie = st.file_uploader(
         "Touchez ici pour choisir ou prendre des photos",
         type=["jpg", "jpeg", "png"],
-        accept_multiple_files=True,
-        key="uploader_chantier"
+        accept_multiple_files=True
     )
     legende = st.text_input("💬 Observation", placeholder="Ex : Travail terminé conformément...")
 
     st.write("")
     
-    # GROS BOUTON VERT D'ENVOI
+    # GROS BOUTON VERT AVEC VALIDATION FIABLE
     if st.button("✅ ENVOYER LE RAPPORT DU JOUR", use_container_width=True):
         if not macons_presents:
             st.error("⚠️ Veuillez sélectionner au moins un ouvrier présent.")
@@ -335,24 +337,19 @@ with tab_saisie:
                 "Legende": str(legende).replace(";", " ").replace("|", " ")
             }
 
-            df_entry = pd.DataFrame([nouvelle_ligne])
-            colonnes_ordre = [
-                "Date", "Chantier", "Corps_d_etat", "Phase", 
-                "Rendement", "Unite", "Consommation",
-                "Effectif", "Nb_Ouvriers", "Photos", "Nb_Photos", "Legende"
-            ]
-            df_entry = df_entry[colonnes_ordre]
+            df_entry = pd.DataFrame([nouvelle_ligne])[COLONNES_OFFICIELLES]
 
-            if os.path.exists(CSV_FILE):
-                df_entry.to_csv(CSV_FILE, sep=';', mode='a', header=False, index=False, encoding='utf-8-sig')
-            else:
+            if not os.path.exists(CSV_FILE):
                 df_entry.to_csv(CSV_FILE, sep=';', index=False, encoding='utf-8-sig')
+            else:
+                df_entry.to_csv(CSV_FILE, sep=';', mode='a', header=False, index=False, encoding='utf-8-sig')
 
             st.balloons()
             st.success(f"🎉 Rapport envoyé avec succès ! Photos dans : 📁 {dossier_chantier} / 📅 {dossier_date}")
+            st.rerun()
 
 # -------------------------------------------------------------
-# ONGLET 2 : TABLEAU DE BORD
+# ONGLET 2 : TABLEAU DE BORD RESPONSABLE
 # -------------------------------------------------------------
 with tab_admin:
     st.markdown("""
@@ -361,7 +358,7 @@ with tab_admin:
         </div>
     """, unsafe_allow_html=True)
 
-    pin = st.text_input("Code Administrateur :", type="password", placeholder="Code...")
+    pin = st.text_input("Code Administrateur :", type="password", placeholder="Entrez le code...")
 
     if pin == ADMIN_PIN:
         df_all = charger_donnees()
@@ -378,6 +375,8 @@ with tab_admin:
             st.metric("Rapports Validés", f"{total_rapports}")
 
         st.write("---")
+        
+        # --- RAPPORT EXCEL ---
         if df_all is not None and not df_all.empty:
             excel_bytes = generer_rapport_excel(df_all)
             st.download_button(
@@ -388,9 +387,11 @@ with tab_admin:
                 use_container_width=True
             )
         else:
-            st.info("Aucune donnée enregistrée pour le moment.")
+            st.info("ℹ️ Aucun rapport enregistré pour l'instant.")
 
         st.write("---")
+        
+        # --- TÉLÉCHARGEMENT ZIP PAR CHANTIER ---
         dossiers_chantiers = [d for d in os.listdir(PHOTOS_BASE_DIR) if os.path.isdir(os.path.join(PHOTOS_BASE_DIR, d))]
 
         if dossiers_chantiers:
@@ -417,16 +418,19 @@ with tab_admin:
                         st.download_button(label=f"⬇️ ZIP", data=zip_buf.getvalue(), file_name=f"photos_{d_ch}.zip", mime="application/zip", key=f"z_{d_ch}", use_container_width=True)
 
         st.write("---")
+        
+        # --- AFFICHAGE DES CARTES DES INTERVENTIONS ---
         if df_all is not None and not df_all.empty and "Chantier" in df_all.columns:
-            chantiers_bruts = [c for c in df_all["Chantier"].dropna().unique() if not str(c).startswith("2026-")]
-            f_proj = st.selectbox("🔍 Filtrer les fiches :", ["Tous les chantiers"] + chantiers_bruts)
+            chantiers_bruts = [c for c in df_all["Chantier"].dropna().unique() if not str(c).startswith("2026-") and str(c).strip()]
+            liste_projets = ["Tous les chantiers"] + list(chantiers_bruts)
+            f_proj = st.selectbox("🔍 Filtrer les fiches :", liste_projets)
 
             df_show = df_all.copy()
             if f_proj != "Tous les chantiers":
                 df_show = df_show[df_show["Chantier"] == f_proj]
 
             for _, row in df_show.iloc[::-1].iterrows():
-                if str(row.get("Chantier", "")).startswith("2026-"):
+                if str(row.get("Chantier", "")).startswith("2026-") or not str(row.get("Chantier", "")).strip():
                     continue
 
                 conso_val = str(row.get("Consommation", "")).strip()
@@ -474,11 +478,13 @@ with tab_admin:
                                 pass
                     st.write("")
 
-        with st.expander("⚙️ Paramètres avancés"):
-            if st.button("🗑️ Réinitialiser CSV"):
+        # --- OUTIL DE NETTOYAGE ---
+        with st.expander("⚙️ Options avancées"):
+            if st.button("🗑️ Nettoyer et Réinitialiser le CSV"):
                 if os.path.exists(CSV_FILE):
                     os.remove(CSV_FILE)
+                    st.success("Fichier CSV nettoyé et prêt pour les nouveaux rapports.")
                     st.rerun()
 
     elif pin != "":
-        st.error("❌ Code incorrect.")
+        st.error("❌ Code secret incorrect.")
