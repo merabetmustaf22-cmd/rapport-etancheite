@@ -13,10 +13,14 @@ from openpyxl.utils import get_column_letter
 
 st.set_page_config(page_title="Chantier & Suivi", page_icon="📱", layout="centered")
 
-# Style du gros bouton vert
+# Style du bouton vert d'envoi
 st.markdown("""
     <style>
-    div[data-testid="stFormSubmitButton"] > button {
+    div.stButton > button {
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+    }
+    .btn-valider button {
         background-color: #10B981 !important;
         color: white !important;
         font-size: 18px !important;
@@ -27,7 +31,7 @@ st.markdown("""
         width: 100% !important;
         box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3) !important;
     }
-    div[data-testid="stFormSubmitButton"] > button:hover {
+    .btn-valider button:hover {
         background-color: #059669 !important;
         color: white !important;
     }
@@ -88,7 +92,8 @@ CONFIG_DEFAUT = {
         "Primaire d'accrochage",
         "PAX (Rouleau bitume)",
         "Micro-béton B300",
-        "Silicone / Mastic joint"
+        "Silicone / Mastic joint",
+        "Autre"
     ]
 }
 
@@ -158,7 +163,7 @@ def generer_rapport_excel(df_source):
             col_letter = get_column_letter(col[0].column)
             ws.column_dimensions[col_letter].width = max(max_len + 4, 12)
 
-    # 1. Synthèse
+    # Feuille 1: Synthèse
     ws1 = wb.create_sheet(title="Synthèse Chantiers")
     headers1 = ["Chantier", "Surface Réalisée (m²)", "Linéaire Réalisé (ML)", "Unités (U)", "Interventions"]
     ws1.append(headers1)
@@ -173,7 +178,7 @@ def generer_rapport_excel(df_source):
         ws1.append([ch, round(m2, 2), round(ml, 2), round(u, 2), len(sub)])
     styliser_feuille(ws1, headers1)
 
-    # 2. Consommation
+    # Feuille 2: Consommation
     ws2 = wb.create_sheet(title="Consommation Matériaux")
     headers2 = ["Date", "Chantier", "Corps d'État", "Matériaux Consommés", "Remarques"]
     ws2.append(headers2)
@@ -184,7 +189,7 @@ def generer_rapport_excel(df_source):
         ws2.append([r.get("Date", ""), r.get("Chantier", ""), r.get("Corps_d_etat", ""), c_mat, r.get("Legende", "")])
     styliser_feuille(ws2, headers2)
 
-    # 3. Effectif
+    # Feuille 3: Effectif
     ws3 = wb.create_sheet(title="Pointage Ouvriers")
     headers3 = ["Date", "Chantier", "Corps d'État", "Effectif Présent", "Nombre d'Ouvriers"]
     ws3.append(headers3)
@@ -192,7 +197,7 @@ def generer_rapport_excel(df_source):
         ws3.append([r.get("Date", ""), r.get("Chantier", ""), r.get("Corps_d_etat", ""), r.get("Effectif", ""), r.get("Nb_Ouvriers", "")])
     styliser_feuille(ws3, headers3)
 
-    # 4. Journal Détaillé
+    # Feuille 4: Journal Détaillé
     ws4 = wb.create_sheet(title="Journal Détaillé")
     headers4 = ["Date", "Chantier", "Corps d'État", "Phase", "Rendement", "Unité", "Consommation", "Effectif", "Observation"]
     ws4.append(headers4)
@@ -219,10 +224,14 @@ def generer_rapport_excel(df_source):
 
 config = charger_config()
 
+# Initialisation de la mémoire pour les consommations
+if "liste_consommations" not in st.session_state:
+    st.session_state.liste_consommations = []
+
 tab_saisie, tab_admin = st.tabs(["📲 Saisie Chantier", "📊 Tableau de Bord"])
 
 # -------------------------------------------------------------
-# ONGLET 1 : SAISIE SÉCURISÉE AVEC SÉLECTION QUANTITÉ & UNITÉ
+# ONGLET 1 : SAISIE AVEC MULTI-PRODUITS ILLIMITÉ
 # -------------------------------------------------------------
 with tab_saisie:
     st.markdown("""
@@ -232,78 +241,84 @@ with tab_saisie:
         </div>
     """, unsafe_allow_html=True)
 
-    with st.form("form_pointage_stable", clear_on_submit=False):
-        date_jour = st.date_input("📅 Date de la journée", value=date.today())
-        chantier_sel = st.selectbox("🏢 Chantier", config["chantiers"])
-        tache_sel = st.selectbox("🛠️ Corps d'état", config["taches"])
-        phase_travaux = st.selectbox("📌 Étape de réalisation", [
-            "Pendant exécution / application",
-            "Avant travaux (État du support)",
-            "Après achèvement (Finition)",
-            "Détail technique / Gorge / Relevé",
-            "Épreuve d'eau (Test d'étanchéité)",
-            "Autre"
-        ])
+    date_jour = st.date_input("📅 Date de la journée", value=date.today())
+    chantier_sel = st.selectbox("🏢 Chantier", config["chantiers"])
+    tache_sel = st.selectbox("🛠️ Corps d'état", config["taches"])
+    phase_travaux = st.selectbox("📌 Étape de réalisation", [
+        "Pendant exécution / application",
+        "Avant travaux (État du support)",
+        "Après achèvement (Finition)",
+        "Détail technique / Gorge / Relevé",
+        "Épreuve d'eau (Test d'étanchéité)",
+        "Autre"
+    ])
 
-        macons_presents = st.multiselect("👷 Ouvriers présents", config["macons"], placeholder="Sélectionnez les ouvriers...")
+    macons_presents = st.multiselect("👷 Ouvriers présents", config["macons"], placeholder="Sélectionnez les ouvriers...")
 
-        c_r1, c_r2 = st.columns([2, 1])
-        with c_r1:
-            rendement = st.number_input("📏 Rendement réalisé", min_value=0.0, step=1.0, format="%.2f")
-        with c_r2:
-            unite = st.selectbox("Unité", ["m²", "ML", "U"])
+    c_r1, c_r2 = st.columns([2, 1])
+    with c_r1:
+        rendement = st.number_input("📏 Rendement réalisé", min_value=0.0, step=1.0, format="%.2f")
+    with c_r2:
+        unite = st.selectbox("Unité", ["m²", "ML", "U"])
 
-        # --- SÉLECTION DES MATÉRIAUX AVEC QUANTITÉ ET UNITÉ FIXES ---
-        st.write("---")
-        st.markdown("### 🧪 Matériaux Consommés")
-        
-        # Produit 1
-        st.markdown("**Produit 1 :**")
-        c1, c2, c3 = st.columns([2, 1, 1])
-        with c1:
-            p1_mat = st.selectbox("Matériau 1", ["Aucun"] + config["materiaux"], key="f_p1")
-        with c2:
-            p1_qte = st.number_input("Qté 1", min_value=0.0, step=1.0, format="%.2f", key="f_q1")
-        with c3:
-            p1_uni = st.selectbox("Unité 1", ["Seaux/Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "Cartouches", "U"], key="f_u1")
+    # --- SECTION CONSOMMATION MULTI-PRODUITS ---
+    st.write("---")
+    st.markdown("### 🧪 Matériaux Consommés")
+    
+    # Affichage des produits déjà enregistrés dans la liste temporaire
+    if st.session_state.liste_consommations:
+        st.markdown("**Matériaux ajoutés pour ce rapport :**")
+        for idx_c, item in enumerate(st.session_state.liste_consommations):
+            col_txt, col_sup = st.columns([4, 1])
+            with col_txt:
+                st.info(f"✔️ {item['produit']} : **{item['quantite']} {item['unite']}**")
+            with col_sup:
+                if st.button("❌", key=f"del_{idx_c}"):
+                    st.session_state.liste_consommations.pop(idx_c)
+                    st.rerun()
 
-        # Produit 2
-        st.markdown("**Produit 2 :**")
-        c4, c5, c6 = st.columns([2, 1, 1])
-        with c4:
-            p2_mat = st.selectbox("Matériau 2", ["Aucun"] + config["materiaux"], key="f_p2")
-        with c5:
-            p2_qte = st.number_input("Qté 2", min_value=0.0, step=1.0, format="%.2f", key="f_q2")
-        with c6:
-            p2_uni = st.selectbox("Unité 2", ["Seaux/Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "Cartouches", "U"], key="f_u2")
+    # Formulaire d'ajout rapide d'un produit
+    with st.expander("➕ Ajouter un matériau consommé", expanded=True):
+        cp1, cp2, cp3 = st.columns([2, 1, 1])
+        with cp1:
+            nouveau_mat = st.selectbox("Produit", config["materiaux"], key="ajout_mat")
+        with cp2:
+            nouvelle_qte = st.number_input("Quantité", min_value=0.0, step=1.0, format="%.2f", key="ajout_qte")
+        with cp3:
+            nouvelle_uni = st.selectbox("Unité", ["Seaux/Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "Cartouches", "U"], key="ajout_uni")
 
-        # Produit 3
-        st.markdown("**Produit 3 :**")
-        c7, c8, c9 = st.columns([2, 1, 1])
-        with c7:
-            p3_mat = st.selectbox("Matériau 3", ["Aucun"] + config["materiaux"], key="f_p3")
-        with c8:
-            p3_qte = st.number_input("Qté 3", min_value=0.0, step=1.0, format="%.2f", key="f_q3")
-        with c9:
-            p3_uni = st.selectbox("Unité 3", ["Seaux/Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "Cartouches", "U"], key="f_u3")
+        if st.button("➕ Ajouter ce produit à la liste", use_container_width=True):
+            if nouvelle_qte > 0:
+                st.session_state.liste_consommations.append({
+                    "produit": nouveau_mat,
+                    "quantite": nouvelle_qte,
+                    "unite": nouvelle_uni
+                })
+                st.rerun()
+            else:
+                st.warning("⚠️ Indiquez une quantité supérieure à 0.")
 
-        st.write("---")
-        st.markdown("### 📸 Photos du chantier")
-        photos_galerie = st.file_uploader(
-            "Prenez ou sélectionnez vos photos",
-            type=["jpg", "jpeg", "png"],
-            accept_multiple_files=True
-        )
-        legende = st.text_input("💬 Observation", placeholder="Ex : Travail terminé conformément...")
+    st.write("---")
+    st.markdown("### 📸 Photos du chantier")
+    photos_galerie = st.file_uploader(
+        "Prenez ou sélectionnez vos photos",
+        type=["jpg", "jpeg", "png"],
+        accept_multiple_files=True
+    )
+    legende = st.text_input("💬 Observation", placeholder="Ex : Travail terminé conformément...")
 
-        st.write("")
-        submit_button = st.form_submit_button("✅ ENVOYER LE RAPPORT DU JOUR", use_container_width=True)
+    st.write("")
+    
+    # GROS BOUTON VERT FINAL
+    st.markdown('<div class="btn-valider">', unsafe_allow_html=True)
+    envoyer_btn = st.button("✅ ENVOYER LE RAPPORT DU JOUR", use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    if submit_button:
+    if envoyer_btn:
         if not macons_presents:
-            st.error("⚠️ Erreur : Veuillez sélectionner au moins un ouvrier présent.")
+            st.error("⚠️ Veuillez sélectionner au moins un ouvrier présent.")
         elif not photos_galerie:
-            st.error("⚠️ Erreur : Veuillez ajouter au moins une photo pour le rapport.")
+            st.error("⚠️ Veuillez ajouter au moins une photo pour le rapport.")
         else:
             try:
                 dossier_chantier = clean_folder_name(chantier_sel)
@@ -328,16 +343,11 @@ with tab_saisie:
 
                     saved_files.append(f"{dossier_chantier}/{dossier_date}/{nom_fichier}")
 
-                # Rassemblement automatique des consommations saisies
-                consos = []
-                if p1_mat != "Aucun" and p1_qte > 0:
-                    consos.append(f"{p1_mat}: {p1_qte} {p1_uni}")
-                if p2_mat != "Aucun" and p2_qte > 0:
-                    consos.append(f"{p2_mat}: {p2_qte} {p2_uni}")
-                if p3_mat != "Aucun" and p3_qte > 0:
-                    consos.append(f"{p3_mat}: {p3_qte} {p3_uni}")
-                
-                conso_finale = " | ".join(consos) if consos else "Aucun"
+                # Formatage de l'ensemble des consommations enregistrées
+                if st.session_state.liste_consommations:
+                    conso_finale = " | ".join([f"{item['produit']}: {item['quantite']} {item['unite']}" for item in st.session_state.liste_consommations])
+                else:
+                    conso_finale = "Aucun"
 
                 nouvelle_ligne = {
                     "Date": str(date_jour),
@@ -361,8 +371,10 @@ with tab_saisie:
                 else:
                     df_entry.to_csv(CSV_FILE, sep=';', mode='a', header=False, index=False, encoding='utf-8-sig')
 
+                # Réinitialisation de la liste des produits après envoi
+                st.session_state.liste_consommations = []
                 st.balloons()
-                st.success(f"🎉 RAPPORT ENREGISTRÉ ! Données inscrites dans le tableau et photos dans : 📁 {dossier_chantier} / 📅 {dossier_date}")
+                st.success(f"🎉 Rapport enregistré avec succès ! Données et photos dans : 📁 {dossier_chantier} / 📅 {dossier_date}")
             except Exception as e:
                 st.error(f"❌ Erreur lors de l'enregistrement : {e}")
 
