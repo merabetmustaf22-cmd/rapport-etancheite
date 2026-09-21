@@ -13,10 +13,10 @@ from openpyxl.utils import get_column_letter
 
 st.set_page_config(page_title="Chantier & Suivi", page_icon="📱", layout="centered")
 
-# --- STYLE DU GROS BOUTON VERT ET DES CARTES ---
+# --- CSS DU BOUTON VERT ET DU DESIGN MOBILE ---
 st.markdown("""
     <style>
-    div.stButton > button:first-child {
+    div[data-testid="stFormSubmitButton"] > button {
         background-color: #10B981 !important;
         color: white !important;
         font-size: 18px !important;
@@ -27,7 +27,7 @@ st.markdown("""
         width: 100% !important;
         box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3) !important;
     }
-    div.stButton > button:first-child:hover {
+    div[data-testid="stFormSubmitButton"] > button:hover {
         background-color: #059669 !important;
         color: white !important;
     }
@@ -111,8 +111,10 @@ def charger_donnees():
     if not os.path.exists(CSV_FILE):
         return None
     try:
+        # Essai avec séparateur point-virgule
         df = pd.read_csv(CSV_FILE, sep=';', encoding='utf-8-sig', on_bad_lines='skip')
-        if "Chantier" not in df.columns or len(df.columns) < 8:
+        if len(df.columns) <= 1:
+            # Essai avec séparateur virgule
             df = pd.read_csv(CSV_FILE, sep=',', encoding='utf-8-sig', on_bad_lines='skip')
         return df
     except Exception:
@@ -161,10 +163,11 @@ def generer_rapport_excel(df_source):
     chantiers_uniques = [c for c in df_source["Chantier"].dropna().unique() if not str(c).startswith("2026-")]
     for ch in sorted(chantiers_uniques):
         sub = df_source[df_source["Chantier"] == ch].copy()
-        sub["Rendement_num"] = pd.to_numeric(sub["Rendement"], errors='coerce').fillna(0)
-        m2 = sub[sub["Unite"].str.contains("m²", na=False)]["Rendement_num"].sum()
-        ml = sub[sub["Unite"].str.contains("ML", na=False)]["Rendement_num"].sum()
-        u = sub[sub["Unite"].str.contains("U", na=False)]["Rendement_num"].sum()
+        sub["Rendement_num"] = pd.to_numeric(sub.get("Rendement", 0), errors='coerce').fillna(0)
+        unite_col = sub.get("Unite", pd.Series([""] * len(sub)))
+        m2 = sub[unite_col.str.contains("m²", na=False)]["Rendement_num"].sum()
+        ml = sub[unite_col.str.contains("ML", na=False)]["Rendement_num"].sum()
+        u = sub[unite_col.str.contains("U", na=False)]["Rendement_num"].sum()
         ws1.append([ch, round(m2, 2), round(ml, 2), round(u, 2), len(sub)])
     styliser_feuille(ws1, headers1)
 
@@ -227,127 +230,124 @@ with tab_saisie:
         </div>
     """, unsafe_allow_html=True)
 
-    date_jour = st.date_input("📅 Date", value=date.today())
-    chantier_sel = st.selectbox("🏢 Chantier", config["chantiers"])
+    with st.form("formulaire_chantier", clear_on_submit=True):
+        date_jour = st.date_input("📅 Date", value=date.today())
+        chantier_sel = st.selectbox("🏢 Chantier", config["chantiers"])
 
-    tache_sel = st.selectbox("🛠️ Corps d'état", config["taches"])
-    phase_travaux = st.selectbox("📌 Étape de réalisation", [
-        "Pendant exécution / application",
-        "Avant travaux (État du support)",
-        "Après achèvement (Finition)",
-        "Détail technique / Gorge / Relevé",
-        "Épreuve d'eau (Test d'étanchéité)",
-        "Autre"
-    ])
+        tache_sel = st.selectbox("🛠️ Corps d'état", config["taches"])
+        phase_travaux = st.selectbox("📌 Étape de réalisation", [
+            "Pendant exécution / application",
+            "Avant travaux (État du support)",
+            "Après achèvement (Finition)",
+            "Détail technique / Gorge / Relevé",
+            "Épreuve d'eau (Test d'étanchéité)",
+            "Autre"
+        ])
 
-    macons_presents = st.multiselect(
-        "👷 Ouvriers présents",
-        config["macons"],
-        placeholder="Sélectionnez les noms..."
-    )
+        macons_presents = st.multiselect(
+            "👷 Ouvriers présents",
+            config["macons"],
+            placeholder="Sélectionnez les noms..."
+        )
 
-    c_r1, c_r2 = st.columns([2, 1])
-    with c_r1:
-        rendement = st.number_input("📏 Rendement réalisé", min_value=0.0, step=1.0, format="%.2f")
-    with c_r2:
-        unite = st.selectbox("Unité", ["m²", "ML", "U"])
+        c_r1, c_r2 = st.columns([2, 1])
+        with c_r1:
+            rendement = st.number_input("📏 Rendement réalisé", min_value=0.0, step=1.0, format="%.2f")
+        with c_r2:
+            unite = st.selectbox("Unité", ["m²", "ML", "U"])
 
-    st.write("---")
-    st.markdown("### 🧪 Consommation des Matériaux")
-    produits_choisis = st.multiselect(
-        "📦 Produits consommés",
-        config["materiaux"],
-        placeholder="Sélectionnez les matériaux utilisés..."
-    )
+        st.write("---")
+        st.markdown("### 🧪 Matériaux Consommés")
+        
+        c_m1, c_m2, c_m3 = st.columns([2, 1, 1])
+        with c_m1:
+            mat_principal = st.selectbox("Matériau principal", ["Aucun"] + config["materiaux"])
+        with c_m2:
+            qte_mat = st.number_input("Quantité", min_value=0.0, step=1.0, format="%.2f")
+        with c_m3:
+            unite_mat = st.selectbox("Unité", ["Seaux/Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "U"])
 
-    consommations_saisies = []
-    if produits_choisis:
-        for p_idx, prod in enumerate(produits_choisis):
-            st.markdown(f"**🔹 {prod}**")
-            col_q, col_u = st.columns([2, 1])
-            with col_q:
-                qte = st.number_input(f"Quantité ({prod})", min_value=0.0, step=1.0, format="%.2f", key=f"q_{p_idx}_{prod}")
-            with col_u:
-                unite_cond = st.selectbox(
-                    f"Unité ({prod})",
-                    ["Seaux / Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "Cartouches"],
-                    key=f"u_{p_idx}_{prod}"
-                )
-            if qte > 0:
-                consommations_saisies.append(f"{prod}: {qte} {unite_cond}")
+        autre_mat = st.text_input("Autre produit consommé (si applicable)", placeholder="Ex : 2 rouleaux ARMA TEK, 1 cartouche silicone...")
 
-    st.write("---")
-    st.markdown("### 📸 Photos du chantier")
-    photos_galerie = st.file_uploader(
-        "Sélectionnez ou prenez les photos (Multi-photos)",
-        type=["jpg", "jpeg", "png"],
-        accept_multiple_files=True
-    )
+        st.write("---")
+        st.markdown("### 📸 Photos du chantier")
+        photos_galerie = st.file_uploader(
+            "Prenez ou sélectionnez vos photos",
+            type=["jpg", "jpeg", "png"],
+            accept_multiple_files=True
+        )
 
-    legende = st.text_input("💬 Remarque / Observation", placeholder="Ex : 2ème couche terminée...")
+        legende = st.text_input("💬 Remarque / Observation", placeholder="Ex : 2ème couche terminée...")
 
-    st.write("")
-    
-    # GROS BOUTON VERT D'ENVOI DIRECT
-    if st.button("✅ ENVOYER LE RAPPORT DU JOUR", use_container_width=True):
-        if not macons_presents:
-            st.error("⚠️ Veuillez sélectionner au moins un ouvrier présent.")
-        else:
-            dossier_chantier = clean_folder_name(chantier_sel)
-            dossier_date = str(date_jour)
+        st.write("")
+        # BOUTON VERT D'ENVOI
+        submit_btn = st.form_submit_button("✅ ENVOYER LE RAPPORT DU JOUR", use_container_width=True)
 
-            chemin_cible = os.path.join(PHOTOS_BASE_DIR, dossier_chantier, dossier_date)
-            os.makedirs(chemin_cible, exist_ok=True)
-
-            saved_files = []
-            tache_clean = re.sub(r'[^a-zA-Z0-9_-]', '_', tache_sel)[:12]
-
-            if photos_galerie:
-                for idx, p in enumerate(photos_galerie):
-                    ext = ".jpg"
-                    if hasattr(p, "name") and os.path.splitext(p.name)[1]:
-                        ext = os.path.splitext(p.name)[1].lower()
-
-                    nom_fichier = f"{tache_clean}_{idx+1}{ext}"
-                    chemin_disque = os.path.join(chemin_cible, nom_fichier)
-
-                    with open(chemin_disque, "wb") as f_img:
-                        f_img.write(p.getbuffer())
-
-                    saved_files.append(f"{dossier_chantier}/{dossier_date}/{nom_fichier}")
-
-            conso_texte = " | ".join(consommations_saisies) if consommations_saisies else "Aucun"
-
-            nouvelle_ligne = {
-                "Date": str(date_jour),
-                "Chantier": str(chantier_sel),
-                "Corps_d_etat": str(tache_sel),
-                "Phase": str(phase_travaux),
-                "Rendement": str(rendement),
-                "Unite": str(unite),
-                "Consommation": conso_texte,
-                "Effectif": ", ".join(macons_presents),
-                "Nb_Ouvriers": len(macons_presents),
-                "Photos": "|".join(saved_files),
-                "Nb_Photos": len(saved_files),
-                "Legende": str(legende).replace(";", " ").replace("|", " ")
-            }
-
-            df_entry = pd.DataFrame([nouvelle_ligne])
-            colonnes_ordre = [
-                "Date", "Chantier", "Corps_d_etat", "Phase", 
-                "Rendement", "Unite", "Consommation",
-                "Effectif", "Nb_Ouvriers", "Photos", "Nb_Photos", "Legende"
-            ]
-            df_entry = df_entry[colonnes_ordre]
-
-            if os.path.exists(CSV_FILE):
-                df_entry.to_csv(CSV_FILE, sep=';', mode='a', header=False, index=False, encoding='utf-8-sig')
+        if submit_btn:
+            if not macons_presents:
+                st.error("⚠️ Veuillez sélectionner au moins un ouvrier présent.")
             else:
-                df_entry.to_csv(CSV_FILE, sep=';', index=False, encoding='utf-8-sig')
+                dossier_chantier = clean_folder_name(chantier_sel)
+                dossier_date = str(date_jour)
 
-            st.balloons()
-            st.success(f"🎉 Rapport envoyé avec succès ! Données et photos classées dans : 📁 {dossier_chantier} / 📅 {dossier_date}")
+                chemin_cible = os.path.join(PHOTOS_BASE_DIR, dossier_chantier, dossier_date)
+                os.makedirs(chemin_cible, exist_ok=True)
+
+                saved_files = []
+                tache_clean = re.sub(r'[^a-zA-Z0-9_-]', '_', tache_sel)[:12]
+
+                if photos_galerie:
+                    for idx, p in enumerate(photos_galerie):
+                        ext = ".jpg"
+                        if hasattr(p, "name") and os.path.splitext(p.name)[1]:
+                            ext = os.path.splitext(p.name)[1].lower()
+
+                        nom_fichier = f"{tache_clean}_{idx+1}{ext}"
+                        chemin_disque = os.path.join(chemin_cible, nom_fichier)
+
+                        with open(chemin_disque, "wb") as f_img:
+                            f_img.write(p.getbuffer())
+
+                        saved_files.append(f"{dossier_chantier}/{dossier_date}/{nom_fichier}")
+
+                # Consommation globale
+                consos = []
+                if mat_principal != "Aucun" and qte_mat > 0:
+                    consos.append(f"{mat_principal}: {qte_mat} {unite_mat}")
+                if autre_mat.strip():
+                    consos.append(autre_mat.strip())
+                conso_texte = " | ".join(consos) if consos else "Aucun"
+
+                nouvelle_ligne = {
+                    "Date": str(date_jour),
+                    "Chantier": str(chantier_sel),
+                    "Corps_d_etat": str(tache_sel),
+                    "Phase": str(phase_travaux),
+                    "Rendement": str(rendement),
+                    "Unite": str(unite),
+                    "Consommation": conso_texte,
+                    "Effectif": ", ".join(macons_presents),
+                    "Nb_Ouvriers": len(macons_presents),
+                    "Photos": "|".join(saved_files),
+                    "Nb_Photos": len(saved_files),
+                    "Legende": str(legende).replace(";", " ").replace("|", " ")
+                }
+
+                df_entry = pd.DataFrame([nouvelle_ligne])
+                colonnes_ordre = [
+                    "Date", "Chantier", "Corps_d_etat", "Phase", 
+                    "Rendement", "Unite", "Consommation",
+                    "Effectif", "Nb_Ouvriers", "Photos", "Nb_Photos", "Legende"
+                ]
+                df_entry = df_entry[colonnes_ordre]
+
+                if os.path.exists(CSV_FILE):
+                    df_entry.to_csv(CSV_FILE, sep=';', mode='a', header=False, index=False, encoding='utf-8-sig')
+                else:
+                    df_entry.to_csv(CSV_FILE, sep=';', index=False, encoding='utf-8-sig')
+
+                st.balloons()
+                st.success(f"🎉 Rapport envoyé avec succès ! Données et photos classées dans : 📁 {dossier_chantier} / 📅 {dossier_date}")
 
 # -------------------------------------------------------------
 # ONGLET 2 : TABLEAU DE BORD RESPONSABLE
@@ -389,7 +389,7 @@ with tab_admin:
                 use_container_width=True
             )
         else:
-            st.button("📥 Rapport Excel (Aucune donnée)", disabled=True, use_container_width=True)
+            st.info("ℹ️ Aucune donnée enregistrée dans le tableau pour le moment.")
 
         st.write("---")
         st.markdown("### 📦 Télécharger les Photos")
@@ -413,7 +413,7 @@ with tab_admin:
 
                     c_info, c_btn = st.columns([2, 1])
                     with c_info:
-                        st.markdown(f"📁 **{d_ch}** ({len(fichiers_total)} photos par date)")
+                        st.markdown(f"📁 **{d_ch}** ({len(fichiers_total)} photos classées par date)")
                     with c_btn:
                         st.download_button(
                             label=f"⬇️ Télécharger ZIP",
