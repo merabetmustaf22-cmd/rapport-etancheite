@@ -9,8 +9,8 @@ from PIL import Image
 
 st.set_page_config(page_title="Chantier & Suivi", page_icon="📱", layout="centered")
 
-PHOTOS_DIR = "photos_chantier"
-os.makedirs(PHOTOS_DIR, exist_ok=True)
+PHOTOS_BASE_DIR = "photos_chantier"
+os.makedirs(PHOTOS_BASE_DIR, exist_ok=True)
 CONFIG_FILE = "config_chantier.json"
 CSV_FILE = "suivi_journalier_chantiers.csv"
 ADMIN_PIN = "2026"
@@ -52,6 +52,9 @@ def charger_config():
 def sauver_config(cfg):
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         json.dump(cfg, f, ensure_ascii=False, indent=2)
+
+def nettoyer_nom_dossier(nom):
+    return nom.split('(')[0].replace(" ", "_").replace("/", "_").strip()
 
 def charger_donnees():
     if not os.path.exists(CSV_FILE):
@@ -124,8 +127,11 @@ with tab_saisie:
             elif not macons_presents:
                 st.error("⚠️ Veuillez sélectionner au moins un ouvrier présent.")
             else:
-                noms_sauvegardes = []
-                chantier_clean = chantier_sel.split('(')[0].replace(" ", "_")
+                dossier_chantier = nettoyer_nom_dossier(chantier_sel)
+                chemin_dossier = os.path.join(PHOTOS_BASE_DIR, dossier_chantier)
+                os.makedirs(chemin_dossier, exist_ok=True)
+
+                noms_sauvegardes_relatifs = []
                 tache_clean = tache_sel.replace(" ", "_")[:10]
 
                 for idx, p in enumerate(photos_galerie):
@@ -133,13 +139,13 @@ with tab_saisie:
                     if hasattr(p, "name") and os.path.splitext(p.name)[1]:
                         ext = os.path.splitext(p.name)[1].lower()
 
-                    nom_final = f"{date_jour}_{chantier_clean}_{tache_clean}_{idx+1}{ext}"
-                    chemin_disque = os.path.join(PHOTOS_DIR, nom_final)
+                    nom_fichier = f"{date_jour}_{tache_clean}_{idx+1}{ext}"
+                    chemin_fichier_complet = os.path.join(chemin_dossier, nom_fichier)
 
-                    with open(chemin_disque, "wb") as f_img:
+                    with open(chemin_fichier_complet, "wb") as f_img:
                         f_img.write(p.getbuffer())
 
-                    noms_sauvegardes.append(nom_final)
+                    noms_sauvegardes_relatifs.append(f"{dossier_chantier}/{nom_fichier}")
 
                 nouvelle_ligne = {
                     "Date": str(date_jour),
@@ -150,8 +156,8 @@ with tab_saisie:
                     "Unite": str(unite),
                     "Effectif": ", ".join(macons_presents),
                     "Nb_Ouvriers": len(macons_presents),
-                    "Photos": "|".join(noms_sauvegardes),
-                    "Nb_Photos": len(noms_sauvegardes),
+                    "Photos": "|".join(noms_sauvegardes_relatifs),
+                    "Nb_Photos": len(noms_sauvegardes_relatifs),
                     "Legende": str(legende).replace(";", " ").replace("|", " ")
                 }
 
@@ -164,7 +170,7 @@ with tab_saisie:
                 else:
                     df_entry.to_csv(CSV_FILE, sep=';', index=False, encoding='utf-8-sig')
 
-                st.success(f"✅ {len(noms_sauvegardes)} photo(s) et métré enregistrés avec succès !")
+                st.success(f"✅ {len(noms_sauvegardes_relatifs)} photo(s) classée(s) dans le dossier [{dossier_chantier}] !")
 
 # -------------------------------------------------------------
 # ONGLET 2 : TABLEAU DE BORD RESPONSABLE
@@ -173,7 +179,7 @@ with tab_admin:
     st.markdown("""
         <div style='background-color: #1E293B; padding: 14px; border-radius: 12px; text-align: center; margin-bottom: 15px;'>
             <h2 style='color: white; margin: 0; font-size: 20px;'>📊 Tableau de Bord Chantier</h2>
-            <p style='color: #94A3B8; margin: 4px 0 0 0; font-size: 13px;'>Suivi visuel des rendements et galerie photos</p>
+            <p style='color: #94A3B8; margin: 4px 0 0 0; font-size: 13px;'>Suivi visuel et dossiers photos par chantier</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -181,9 +187,11 @@ with tab_admin:
 
     if pin == ADMIN_PIN:
         df_all = charger_donnees()
-        total_photos = len(os.listdir(PHOTOS_DIR)) if os.path.exists(PHOTOS_DIR) else 0
+        
+        total_photos = 0
+        for root, _, files in os.walk(PHOTOS_BASE_DIR):
+            total_photos += len([f for f in files if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
 
-        # --- CARTES INDICATEURS (PHOTOS & RAPPORTS SEULEMENT) ---
         kpi1, kpi2 = st.columns(2)
         with kpi1:
             st.metric("Photos Reçues", f"{total_photos} 📸")
@@ -191,46 +199,57 @@ with tab_admin:
             total_rapports = len(df_all) if df_all is not None else 0
             st.metric("Rapports", f"{total_rapports}")
 
-        st.write("")
+        st.write("---")
 
-        # --- EXPORT ---
-        col_btn1, col_btn2 = st.columns(2)
-        with col_btn1:
-            fichiers_disponibles = os.listdir(PHOTOS_DIR) if os.path.exists(PHOTOS_DIR) else []
-            if fichiers_disponibles:
-                zip_buffer = io.BytesIO()
-                with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-                    for photo in fichiers_disponibles:
-                        full_path = os.path.join(PHOTOS_DIR, photo)
-                        if os.path.isfile(full_path):
-                            zip_file.write(full_path, arcname=photo)
-                
-                st.download_button(
-                    label="📦 Télécharger Photos (ZIP)",
-                    data=zip_buffer.getvalue(),
-                    file_name=f"photos_chantiers_{date.today()}.zip",
-                    mime="application/zip",
-                    use_container_width=True
-                )
-            else:
-                st.button("📦 Photos (0)", disabled=True, use_container_width=True)
+        # --- TÉLÉCHARGEMENT ZIP PAR CHANTIER OU GLOBAL ---
+        st.markdown("### 📦 Téléchargements Photos & Données")
+        dossiers_existants = [d for d in os.listdir(PHOTOS_BASE_DIR) if os.path.isdir(os.path.join(PHOTOS_BASE_DIR, d))]
+        
+        col_sel_ch, col_zip_ch = st.columns([2, 1])
+        with col_sel_ch:
+            option_chantier_zip = st.selectbox("Sélectionnez le chantier à télécharger :", ["Tous les chantiers (Dossiers séparés)"] + dossiers_existants)
 
-        with col_btn2:
-            if df_all is not None and not df_all.empty:
-                csv_bytes = df_all.to_csv(sep=';', index=False, encoding='utf-8-sig').encode('utf-8-sig')
-                st.download_button(
-                    label="📊 Télécharger Données (Excel)",
-                    data=csv_bytes,
-                    file_name="registre_chantier.csv",
-                    mime="text/csv",
-                    use_container_width=True
-                )
-            else:
-                st.button("📊 Excel (Vide)", disabled=True, use_container_width=True)
+        with col_zip_ch:
+            st.write("")
+            st.write("")
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+                if option_chantier_zip == "Tous les chantiers (Dossiers séparés)":
+                    for root, _, files in os.walk(PHOTOS_BASE_DIR):
+                        for f in files:
+                            chemin_complet = os.path.join(root, f)
+                            arcname = os.path.relpath(chemin_complet, PHOTOS_BASE_DIR)
+                            zip_file.write(chemin_complet, arcname=arcname)
+                    nom_zip = f"tous_chantiers_photos_{date.today()}.zip"
+                else:
+                    dossier_cible = os.path.join(PHOTOS_BASE_DIR, option_chantier_zip)
+                    for f in os.listdir(dossier_cible):
+                        chemin_f = os.path.join(dossier_cible, f)
+                        if os.path.isfile(chemin_f):
+                            zip_file.write(chemin_f, arcname=f"{option_chantier_zip}/{f}")
+                    nom_zip = f"photos_{option_chantier_zip}_{date.today()}.zip"
+
+            st.download_button(
+                label="📥 Télécharger ZIP",
+                data=zip_buffer.getvalue(),
+                file_name=nom_zip,
+                mime="application/zip",
+                use_container_width=True
+            )
+
+        if df_all is not None and not df_all.empty:
+            csv_bytes = df_all.to_csv(sep=';', index=False, encoding='utf-8-sig').encode('utf-8-sig')
+            st.download_button(
+                label="📊 Télécharger Registre (Excel/CSV)",
+                data=csv_bytes,
+                file_name="registre_chantier.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
 
         st.write("---")
 
-        # --- FILTRE & AFFICHAGE DES CARTES ---
+        # --- FILTRE & AFFICHAGE DES CARTES ET PHOTOS ---
         if df_all is not None and not df_all.empty and "Chantier" in df_all.columns:
             chantiers_bruts = [c for c in df_all["Chantier"].dropna().unique() if not str(c).startswith("2026-")]
             liste_chantiers = ["Tous les chantiers"] + list(chantiers_bruts)
@@ -266,14 +285,24 @@ with tab_admin:
 
                     photos_raw = str(row.get("Photos", ""))
                     fichiers = [f.strip() for f in photos_raw.replace(",", "|").replace(";", "|").split("|") if f.strip()]
-                    photos_valides = [f for f in fichiers if os.path.exists(os.path.join(PHOTOS_DIR, f))]
+                    
+                    chemins_trouves = []
+                    for f in fichiers:
+                        p1 = os.path.join(PHOTOS_BASE_DIR, f)
+                        p2 = os.path.join(PHOTOS_BASE_DIR, os.path.basename(f))
+                        if os.path.exists(p1):
+                            chemins_trouves.append(p1)
+                        elif os.path.exists(p2):
+                            chemins_trouves.append(p2)
 
-                    if photos_valides:
-                        cols = st.columns(len(photos_valides) if len(photos_valides) <= 3 else 3)
-                        for i, f_name in enumerate(photos_valides):
-                            chemin_f = os.path.join(PHOTOS_DIR, f_name)
-                            img = Image.open(chemin_f)
-                            cols[i % 3].image(img, use_container_width=True)
+                    if chemins_trouves:
+                        cols = st.columns(len(chemins_trouves) if len(chemins_trouves) <= 3 else 3)
+                        for i, chemin_img in enumerate(chemins_trouves):
+                            try:
+                                img = Image.open(chemin_img)
+                                cols[i % 3].image(img, use_container_width=True)
+                            except Exception:
+                                pass
 
                     st.write("")
         else:
