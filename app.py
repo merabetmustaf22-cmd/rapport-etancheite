@@ -7,8 +7,7 @@ import io
 import zipfile
 from PIL import Image
 
-# Configuration écran vertical smartphone
-st.set_page_config(page_title="Chantier Mobile", page_icon="📱", layout="centered")
+st.set_page_config(page_title="Chantier & Suivi", page_icon="📱", layout="centered")
 
 PHOTOS_DIR = "photos_chantier"
 os.makedirs(PHOTOS_DIR, exist_ok=True)
@@ -50,41 +49,43 @@ def charger_config():
             return CONFIG_DEFAUT
     return CONFIG_DEFAUT
 
+def sauver_config(cfg):
+    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        json.dump(cfg, f, ensure_ascii=False, indent=2)
+
 def charger_donnees():
     if not os.path.exists(CSV_FILE):
         return None
     try:
-        df = pd.read_csv(CSV_FILE, sep=';', encoding='utf-8-sig', on_bad_lines='skip')
-        return df
+        return pd.read_csv(CSV_FILE, sep=';', encoding='utf-8-sig', on_bad_lines='skip')
     except Exception:
         try:
-            df = pd.read_csv(CSV_FILE, encoding='utf-8-sig', on_bad_lines='skip')
-            return df
+            return pd.read_csv(CSV_FILE, encoding='utf-8-sig', on_bad_lines='skip')
         except Exception:
             return None
 
 config = charger_config()
 
-tab_saisie, tab_admin = st.tabs(["📲 Saisie Terrain", "🔒 Espace Admin"])
+tab_saisie, tab_admin = st.tabs(["📲 Saisie Chantier", "📊 Tableau de Bord"])
 
 # -------------------------------------------------------------
-# ONGLET 1 : INTERFACE MOBILE POUR LES MAÇONS
+# ONGLET 1 : SAISIE OUVRIER
 # -------------------------------------------------------------
 with tab_saisie:
     st.markdown("""
         <div style='background-color: #0F766E; padding: 14px; border-radius: 12px; text-align: center; margin-bottom: 15px;'>
-            <h2 style='color: white; margin: 0; font-size: 22px;'>📱 Pointage & Photos Chantier</h2>
-            <p style='color: #CCFBF1; margin: 5px 0 0 0; font-size: 13px;'>Remplissez les champs et ajoutez vos photos</p>
+            <h2 style='color: white; margin: 0; font-size: 20px;'>📱 Pointage & Photos Chantier</h2>
+            <p style='color: #CCFBF1; margin: 4px 0 0 0; font-size: 13px;'>Enregistrez l'avancement et les photos du jour</p>
         </div>
     """, unsafe_allow_html=True)
 
     with st.form("form_mobile_chantier", clear_on_submit=True):
-        date_jour = st.date_input("📅 Date du jour", value=date.today())
+        date_jour = st.date_input("📅 Date", value=date.today())
         chantier_sel = st.selectbox("🏢 Chantier", config["chantiers"])
 
         tache_sel = st.selectbox("🛠️ Travail / Corps d'état", config["taches"])
         phase_travaux = st.selectbox("📌 Étape de réalisation", [
-            "Pendant l'application / exécution",
+            "Pendant exécution / application",
             "Avant travaux (État du support)",
             "Après achèvement (Finition)",
             "Détail technique / Gorge / Relevé",
@@ -93,9 +94,9 @@ with tab_saisie:
         ])
 
         macons_presents = st.multiselect(
-            "👷 Ouvriers présents sur ce travail",
+            "👷 Ouvriers présents",
             config["macons"],
-            placeholder="Touchez pour choisir..."
+            placeholder="Sélectionnez les noms..."
         )
 
         c_r1, c_r2 = st.columns([2, 1])
@@ -105,18 +106,17 @@ with tab_saisie:
             unite = st.selectbox("Unité", ["m²", "ML", "U"])
 
         st.write("---")
-        st.markdown("### 📸 Photos du chantier")
-        
+        st.markdown("### 📸 Photos du travail")
         photos_galerie = st.file_uploader(
-            "Prendre une photo avec l'appareil ou choisir dans la galerie (Multi-photos)",
+            "Prendre une photo ou importer depuis la galerie",
             type=["jpg", "jpeg", "png"],
             accept_multiple_files=True
         )
 
-        legende = st.text_input("💬 Remarque / Détail sur la photo", placeholder="Ex : Fin de première couche...")
+        legende = st.text_input("💬 Remarque / Observation", placeholder="Ex : Zone A finie...")
 
         st.write("")
-        submitted = st.form_submit_button("🚀 ENVOYER LE RAPPORT DU JOUR", use_container_width=True)
+        submitted = st.form_submit_button("🚀 ENVOYER LE RAPPORT", use_container_width=True)
 
         if submitted:
             if not photos_galerie:
@@ -129,11 +129,11 @@ with tab_saisie:
                 tache_clean = tache_sel.replace(" ", "_")[:12]
 
                 for idx, p in enumerate(photos_galerie):
-                    extension = ".jpg"
+                    ext = ".jpg"
                     if hasattr(p, "name") and os.path.splitext(p.name)[1]:
-                        extension = os.path.splitext(p.name)[1].lower()
+                        ext = os.path.splitext(p.name)[1].lower()
 
-                    nom_final = f"{date_jour}_{chantier_clean}_{tache_clean}_{idx+1}{extension}"
+                    nom_final = f"{date_jour}_{chantier_clean}_{tache_clean}_{idx+1}{ext}"
                     chemin_disque = os.path.join(PHOTOS_DIR, nom_final)
 
                     with open(chemin_disque, "wb") as f_img:
@@ -164,18 +164,39 @@ with tab_saisie:
                 st.success(f"✅ {len(noms_sauvegardes)} photo(s) et métré enregistrés avec succès !")
 
 # -------------------------------------------------------------
-# ONGLET 2 : ESPACE ADMIN SÉCURISÉ
+# ONGLET 2 : NOUVEAU TABLEAU DE BORD RESPONSABLE (DESIGN MODERNE)
 # -------------------------------------------------------------
 with tab_admin:
-    st.subheader("🔒 Espace Responsable")
-    pin = st.text_input("Code Secret :", type="password")
+    st.markdown("""
+        <div style='background-color: #1E293B; padding: 14px; border-radius: 12px; text-align: center; margin-bottom: 15px;'>
+            <h2 style='color: white; margin: 0; font-size: 20px;'>📊 Tableau de Bord Chantier</h2>
+            <p style='color: #94A3B8; margin: 4px 0 0 0; font-size: 13px;'>Suivi visuel des rendements et galerie photos</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    pin = st.text_input("Code Administrateur :", type="password", placeholder="Entrez le code...")
 
     if pin == ADMIN_PIN:
-        st.success("🔓 Accès déverrouillé.")
+        df_all = charger_donnees()
+        total_photos = len(os.listdir(PHOTOS_DIR)) if os.path.exists(PHOTOS_DIR) else 0
 
-        st.markdown("### 📦 Téléchargements")
-        if st.button("🗂️ Préparer l'archive ZIP des photos", use_container_width=True):
-            fichiers_disponibles = os.listdir(PHOTOS_DIR)
+        # --- CARTES INDICATEURS (KPIs) ---
+        kpi1, kpi2, kpi3 = st.columns(3)
+        with kpi1:
+            total_m2 = df_all[df_all["Unite"] == "m²"]["Rendement"].sum() if df_all is not None and "Rendement" in df_all.columns else 0.0
+            st.metric("Total Réalisé", f"{total_m2:.1f} m²")
+        with kpi2:
+            st.metric("Photos Reçues", f"{total_photos} 📸")
+        with kpi3:
+            total_rapports = len(df_all) if df_all is not None else 0
+            st.metric("Rapports", f"{total_rapports}")
+
+        st.write("")
+
+        # --- ACTIONS RAPIDES EXPORT ---
+        col_btn1, col_btn2 = st.columns(2)
+        with col_btn1:
+            fichiers_disponibles = os.listdir(PHOTOS_DIR) if os.path.exists(PHOTOS_DIR) else []
             if fichiers_disponibles:
                 zip_buffer = io.BytesIO()
                 with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
@@ -185,52 +206,99 @@ with tab_admin:
                             zip_file.write(full_path, arcname=photo)
                 
                 st.download_button(
-                    label="📥 Télécharger le fichier ZIP",
+                    label="📦 Télécharger Photos (ZIP)",
                     data=zip_buffer.getvalue(),
                     file_name=f"photos_chantiers_{date.today()}.zip",
                     mime="application/zip",
                     use_container_width=True
                 )
             else:
-                st.warning("Aucune photo disponible.")
+                st.button("📦 Photos (0)", disabled=True, use_container_width=True)
 
-        df_all = charger_donnees()
-
-        if df_all is not None and not df_all.empty:
-            csv_bytes = df_all.to_csv(sep=';', index=False, encoding='utf-8-sig').encode('utf-8-sig')
-            st.download_button(
-                "📥 Télécharger le registre (Excel/CSV)",
-                csv_bytes,
-                "registre_chantier.csv",
-                "text/csv",
-                use_container_width=True
-            )
-
-            st.write("---")
-            st.markdown("### 🖼️ Dernières photos reçues")
-            for _, row in df_all.tail(5).iloc[::-1].iterrows():
-                st.write(f"**📍 {row.get('Chantier', '')} - {row.get('Corps_d_etat', '')}** ({row.get('Date', '')})")
-                st.caption(f"Rendement : {row.get('Rendement', '')} {row.get('Unite', '')} | 👷 {row.get('Effectif', '')}")
-                photos_str = str(row.get('Photos', ''))
-                fichiers = photos_str.split(",") if "," in photos_str else photos_str.split(";")
-                for f_name in fichiers:
-                    chemin_f = os.path.join(PHOTOS_DIR, f_name.strip())
-                    if os.path.exists(chemin_f):
-                        try:
-                            img = Image.open(chemin_f)
-                            st.image(img, use_container_width=True)
-                        except Exception:
-                            pass
-                st.write("---")
-        else:
-            st.info("Aucune saisie pour le moment.")
+        with col_btn2:
+            if df_all is not None and not df_all.empty:
+                csv_bytes = df_all.to_csv(sep=';', index=False, encoding='utf-8-sig').encode('utf-8-sig')
+                st.download_button(
+                    label="📊 Télécharger Données (Excel)",
+                    data=csv_bytes,
+                    file_name="registre_chantier.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
+            else:
+                st.button("📊 Excel (Vide)", disabled=True, use_container_width=True)
 
         st.write("---")
-        if st.button("🗑️ Réinitialiser le fichier CSV corrompu", help="Cliquez ici si le tableau affiche une erreur de lecture"):
-            if os.path.exists(CSV_FILE):
-                os.remove(CSV_FILE)
-                st.success("Fichier CSV réinitialisé avec succès.")
-                st.rerun()
+
+        # --- FILTRE DE RECHERCHE ---
+        if df_all is not None and not df_all.empty:
+            liste_chantiers = ["Tous les chantiers"] + list(df_all["Chantier"].dropna().unique())
+            filtre_ch = st.selectbox("🔍 Filtrer par projet :", liste_chantiers)
+
+            df_vue = df_all.copy()
+            if filtre_ch != "Tous les chantiers":
+                df_vue = df_vue[df_vue["Chantier"] == filtre_ch]
+
+            st.write(f"Affichage de **{len(df_vue)}** fiche(s) :")
+
+            # --- FLUX DES FICHES CHANTIER EN CARTES ÉLÉGANTES ---
+            for _, row in df_vue.iloc[::-1].iterrows():
+                with st.container():
+                    st.markdown(f"""
+                        <div style='background-color: #F8FAFC; border-left: 5px solid #0F766E; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-top: 1px solid #E2E8F0; border-right: 1px solid #E2E8F0; border-bottom: 1px solid #E2E8F0;'>
+                            <div style='display: flex; justify-content: space-between; align-items: center;'>
+                                <span style='font-weight: 700; color: #0F172A; font-size: 15px;'>🏢 {row.get("Chantier", "")}</span>
+                                <span style='background-color: #E2E8F0; padding: 2px 8px; border-radius: 12px; font-size: 12px; color: #475569;'>📅 {row.get("Date", "")}</span>
+                            </div>
+                            <div style='margin-top: 6px; font-size: 14px; color: #334155;'>
+                                <b>Travaux :</b> <span style='color: #0F766E;'>{row.get("Corps_d_etat", "")}</span> &nbsp;|&nbsp; 
+                                <b>Rendement :</b> <b>{row.get("Rendement", "")} {row.get("Unite", "")}</b>
+                            </div>
+                            <div style='margin-top: 4px; font-size: 13px; color: #64748B;'>
+                                👷 <i>{row.get("Effectif", "")}</i>
+                            </div>
+                            {"<div style='margin-top: 4px; font-size: 13px; color: #0284C7;'>💬 " + str(row.get("Legende")) + "</div>" if pd.notna(row.get("Legende")) and str(row.get("Legende")).strip() else ""}
+                        </div>
+                    """, unsafe_allow_html=True)
+
+                    # Affichage des photos de la fiche
+                    photos_str = str(row.get("Photos", ""))
+                    fichiers = photos_str.split(",") if "," in photos_str else photos_str.split(";")
+                    photos_valides = [f.strip() for f in fichiers if os.path.exists(os.path.join(PHOTOS_DIR, f.strip()))]
+
+                    if photos_valides:
+                        cols = st.columns(len(photos_valides) if len(photos_valides) <= 3 else 3)
+                        for i, f_name in enumerate(photos_valides):
+                            chemin_f = os.path.join(PHOTOS_DIR, f_name)
+                            img = Image.open(chemin_f)
+                            cols[i % 3].image(img, use_container_width=True)
+
+                    st.write("")
+        else:
+            st.info("Aucune intervention enregistrée pour l'instant.")
+
+        # --- GESTION DISCRÈTE DES ÉQUIPES EN BAS DE PAGE ---
+        with st.expander("⚙️ Paramètres (Modifier les chantiers ou les maçons)"):
+            st.markdown("##### 👷 Ouvriers enregistrés")
+            st.caption(", ".join(config["macons"]))
+            c_m1, c_m2 = st.columns([3, 1])
+            with c_m1:
+                n_mac = st.text_input("Nouvel ouvrier", key="add_m")
+            with c_m2:
+                st.write("")
+                st.write("")
+                if st.button("➕ Ajouter"):
+                    if n_mac.strip() and n_mac.strip() not in config["macons"]:
+                        config["macons"].append(n_mac.strip())
+                        sauver_config(config)
+                        st.rerun()
+
+            st.write("---")
+            if st.button("🗑️ Réinitialiser le registre CSV si besoin"):
+                if os.path.exists(CSV_FILE):
+                    os.remove(CSV_FILE)
+                    st.success("Fichier CSV nettoyé.")
+                    st.rerun()
 
     elif pin != "":
-        st.error("❌ Code incorrect.")
+        st.error("❌ Code secret incorrect.")
