@@ -11,91 +11,143 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
-st.set_page_config(page_title="Chantier & Suivi", page_icon="🏗️", layout="centered")
+st.set_page_config(
+    page_title="Système de Suivi Technique Étanchéité",
+    page_icon="🏗️",
+    layout="centered",
+    initial_sidebar_state="collapsed"
+)
 
-# --- DESIGN MODERNE CSS (ENGINEERING & DASHBOARD PRO) ---
+# --- THEME CORPORATE ENGINEERING (SLATE & EMERALD) ---
 st.markdown("""
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    
+    html, body, [class*="css"] {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    
     .stApp {
-        background-color: #F8FAFC;
+        background-color: #F1F5F9;
     }
-    div.stButton > button {
-        border-radius: 10px !important;
-        font-weight: 600 !important;
-        transition: all 0.2s ease-in-out !important;
+
+    /* En-tête institutionnel */
+    .header-cadre {
+        background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+        border-radius: 16px;
+        padding: 24px;
+        color: #FFFFFF;
+        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.25);
+        margin-bottom: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
     }
+    .header-title {
+        font-size: 21px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        margin: 0;
+        color: #FFFFFF;
+    }
+    .header-sub {
+        font-size: 13px;
+        color: #94A3B8;
+        margin-top: 6px;
+        font-weight: 400;
+    }
+
+    /* Bouton principal de transmission */
     .btn-valider button {
-        background: linear-gradient(135deg, #059669 0%, #10B981 100%) !important;
-        color: white !important;
-        font-size: 17px !important;
+        background: linear-gradient(135deg, #0D9488 0%, #0F766E 100%) !important;
+        color: #FFFFFF !important;
+        font-size: 16px !important;
         font-weight: 700 !important;
         border-radius: 12px !important;
         border: none !important;
-        padding: 14px 20px !important;
+        padding: 16px !important;
         width: 100% !important;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25) !important;
+        letter-spacing: 0.3px !important;
+        box-shadow: 0 6px 20px rgba(13, 148, 136, 0.28) !important;
+        transition: all 0.2s ease !important;
     }
     .btn-valider button:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 24px rgba(13, 148, 136, 0.38) !important;
     }
+
+    /* Bouton de téléchargement institutionnel */
     div.stDownloadButton > button {
-        background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%) !important;
-        color: white !important;
+        background-color: #0F172A !important;
+        color: #FFFFFF !important;
         font-weight: 600 !important;
+        font-size: 14px !important;
         border-radius: 10px !important;
-        border: none !important;
-        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15) !important;
+        border: 1px solid #334155 !important;
+        padding: 10px 18px !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.06) !important;
     }
-    .card-rapport {
-        background: #FFFFFF;
-        border: 1px solid #E2E8F0;
-        border-left: 6px solid #0F766E;
+
+    /* Fiches de synthèse interventions */
+    .card-intervention {
+        background-color: #FFFFFF;
         border-radius: 14px;
-        padding: 16px;
-        margin-bottom: 15px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        border: 1px solid #E2E8F0;
+        padding: 18px;
+        margin-bottom: 18px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+        border-left: 6px solid #0D9488;
     }
-    .badge-chantier {
+    .card-header-flex {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #F1F5F9;
+        padding-bottom: 10px;
+        margin-bottom: 12px;
+    }
+    .tag-projet {
         font-size: 15px;
-        font-weight: 700;
+        font-weight: 800;
         color: #0F172A;
     }
-    .badge-date {
-        font-size: 13px;
+    .tag-date {
+        font-size: 12px;
+        font-weight: 600;
         color: #64748B;
-        font-weight: 500;
+        background: #F8FAFC;
+        padding: 4px 8px;
+        border-radius: 6px;
+        border: 1px solid #E2E8F0;
     }
     .tag-corps {
         display: inline-block;
-        background-color: #F1F5F9;
+        background-color: #F8FAFC;
         color: #334155;
+        border: 1px solid #CBD5E1;
         padding: 4px 10px;
         border-radius: 6px;
         font-size: 13px;
         font-weight: 600;
-        margin-top: 6px;
     }
     .tag-rendement {
         display: inline-block;
-        background-color: #ECFDF5;
-        color: #047857;
+        background-color: #CCFBF1;
+        color: #0F766E;
         padding: 4px 10px;
         border-radius: 6px;
         font-size: 13px;
         font-weight: 700;
         margin-left: 6px;
     }
-    .badge-materiau {
+    .tag-materiau {
         display: inline-block;
-        background-color: #E0F2FE;
-        color: #0369A1;
-        padding: 3px 8px;
+        background-color: #F0FDF4;
+        color: #15803D;
+        border: 1px solid #BBF7D0;
+        padding: 4px 9px;
         border-radius: 6px;
         font-size: 12px;
         font-weight: 600;
-        margin: 2px 4px 2px 0;
-        border: 1px solid #BAE6FD;
+        margin: 3px 4px 3px 0;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -188,8 +240,8 @@ def generer_rapport_excel(df_source):
     wb.remove(wb.active)
 
     header_fill = PatternFill(start_color="0F766E", end_color="0F766E", fill_type="solid")
-    header_font = Font(name="Arial", size=11, bold=True, color="FFFFFF")
-    data_font = Font(name="Arial", size=10)
+    header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    data_font = Font(name="Calibri", size=10)
     border_thin = Border(
         left=Side(style='thin', color='CBD5E1'),
         right=Side(style='thin', color='CBD5E1'),
@@ -213,15 +265,15 @@ def generer_rapport_excel(df_source):
                 else:
                     cell.alignment = Alignment(horizontal="left", vertical="center")
 
-        ws.row_dimensions[1].height = 26
+        ws.row_dimensions[1].height = 28
         for col in ws.columns:
             max_len = max(len(str(cell.value or '')) for cell in col)
             col_letter = get_column_letter(col[0].column)
-            ws.column_dimensions[col_letter].width = max(max_len + 4, 12)
+            ws.column_dimensions[col_letter].width = max(max_len + 5, 13)
 
-    # 1. Synthèse
+    # Feuille 1: Synthèse
     ws1 = wb.create_sheet(title="Synthèse Chantiers")
-    headers1 = ["Chantier", "Surface Réalisée (m²)", "Linéaire Réalisé (ML)", "Unités (U)", "Interventions"]
+    headers1 = ["Chantier", "Surface Réalisée (m²)", "Linéaire Réalisé (ML)", "Unités (U)", "Total Interventions"]
     ws1.append(headers1)
     chantiers_uniques = [c for c in df_source["Chantier"].dropna().unique() if not str(c).startswith("2026-") and str(c).strip()]
     for ch in sorted(chantiers_uniques):
@@ -234,7 +286,7 @@ def generer_rapport_excel(df_source):
         ws1.append([ch, round(m2, 2), round(ml, 2), round(u, 2), len(sub)])
     styliser_feuille(ws1, headers1)
 
-    # 2. Consommation
+    # Feuille 2: Consommation
     ws2 = wb.create_sheet(title="Consommation Matériaux")
     headers2 = ["Date", "Chantier", "Corps d'État", "Matériaux Consommés", "Remarques"]
     ws2.append(headers2)
@@ -245,7 +297,7 @@ def generer_rapport_excel(df_source):
         ws2.append([r.get("Date", ""), r.get("Chantier", ""), r.get("Corps_d_etat", ""), c_mat, r.get("Legende", "")])
     styliser_feuille(ws2, headers2)
 
-    # 3. Effectif
+    # Feuille 3: Effectif
     ws3 = wb.create_sheet(title="Pointage Ouvriers")
     headers3 = ["Date", "Chantier", "Corps d'État", "Effectif Présent", "Nombre d'Ouvriers"]
     ws3.append(headers3)
@@ -253,7 +305,7 @@ def generer_rapport_excel(df_source):
         ws3.append([r.get("Date", ""), r.get("Chantier", ""), r.get("Corps_d_etat", ""), r.get("Effectif", ""), r.get("Nb_Ouvriers", "")])
     styliser_feuille(ws3, headers3)
 
-    # 4. Journal Détaillé
+    # Feuille 4: Journal Détaillé
     ws4 = wb.create_sheet(title="Journal Détaillé")
     headers4 = ["Date", "Chantier", "Corps d'État", "Phase", "Rendement", "Unité", "Consommation", "Effectif", "Observation"]
     ws4.append(headers4)
@@ -283,63 +335,77 @@ config = charger_config()
 if "liste_consommations" not in st.session_state:
     st.session_state.liste_consommations = []
 
-tab_saisie, tab_admin = st.tabs(["📲 Saisie Chantier", "📊 Tableau de Bord"])
+tab_saisie, tab_admin = st.tabs(["📲 Saisie Terrain", "📊 Espace Encadrement & Rapports"])
 
 # -------------------------------------------------------------
-# ONGLET 1 : SAISIE TERRAIN
+# ONGLET 1 : SAISIE TERRAIN CADRE & PROPRE
 # -------------------------------------------------------------
 with tab_saisie:
     st.markdown("""
-        <div style='background: linear-gradient(135deg, #0F766E 0%, #064E3B 100%); padding: 16px; border-radius: 14px; text-align: center; margin-bottom: 16px; box-shadow: 0 4px 10px rgba(15, 118, 110, 0.2);'>
-            <h2 style='color: white; margin: 0; font-size: 20px; font-weight: 700;'>📱 Rapport & Pointage Journalier</h2>
-            <p style='color: #CCFBF1; margin: 4px 0 0 0; font-size: 13px;'>Travaux d'étanchéité, équipes et consommations</p>
+        <div class='header-cadre'>
+            <div style='display: flex; justify-content: space-between; align-items: flex-start;'>
+                <div>
+                    <h1 class='header-title'>Rapport Journalier d'Exécution</h1>
+                    <div class='header-sub'>Étanchéité technique & Traitement des supports</div>
+                </div>
+                <div style='background: rgba(13, 148, 136, 0.2); border: 1px solid #0D9488; color: #5EEAD4; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 700;'>
+                    PRO-V1.0
+                </div>
+            </div>
         </div>
     """, unsafe_allow_html=True)
 
-    date_jour = st.date_input("📅 Date de la journée", value=date.today())
-    chantier_sel = st.selectbox("🏢 Chantier", config["chantiers"])
-    tache_sel = st.selectbox("🛠️ Corps d'état", config["taches"])
-    phase_travaux = st.selectbox("📌 Étape de réalisation", [
-        "Pendant exécution / application",
-        "Avant travaux (État du support)",
-        "Après achèvement (Finition)",
-        "Détail technique / Gorge / Relevé",
-        "Épreuve d'eau (Test d'étanchéité)",
-        "Autre"
-    ])
+    st.markdown("##### 📍 Localisation & Tâche")
+    c_p1, c_p2 = st.columns([1, 1])
+    with c_p1:
+        date_jour = st.date_input("Date des travaux", value=date.today())
+        chantier_sel = st.selectbox("Projet / Chantier", config["chantiers"])
+    with c_p2:
+        tache_sel = st.selectbox("Corps d'état / Ouvrage", config["taches"])
+        phase_travaux = st.selectbox("Phase de réalisation", [
+            "Pendant exécution / application",
+            "Avant travaux (État du support)",
+            "Après achèvement (Finition)",
+            "Détail technique / Gorge / Relevé",
+            "Épreuve d'eau (Test d'étanchéité)",
+            "Autre"
+        ])
 
-    macons_presents = st.multiselect("👷 Ouvriers présents", config["macons"], placeholder="Sélectionnez l'équipe...")
+    st.write("---")
+    st.markdown("##### 👷 Équipe mobilisée & Metré")
+    macons_presents = st.multiselect("Personnel d'exécution présent", config["macons"], placeholder="Sélectionnez les compagnons...")
 
     c_r1, c_r2 = st.columns([2, 1])
     with c_r1:
-        rendement = st.number_input("📏 Rendement réalisé", min_value=0.0, step=1.0, format="%.2f")
+        rendement = st.number_input("Métré / Rendement réalisé", min_value=0.0, step=1.0, format="%.2f")
     with c_r2:
-        unite = st.selectbox("Unité", ["m²", "ML", "U"])
+        unite = st.selectbox("Unité de mesure", ["m²", "ML", "U"])
 
+    # GESTION DES MATÉRIAUX
     st.write("---")
-    st.markdown("### 🧪 Consommation Matériaux")
+    st.markdown("##### 🧪 Matériaux & Produits Appliqués")
     
     if st.session_state.liste_consommations:
-        st.caption("Matériaux prêts à être enregistrés :")
+        st.caption("Produits préparés pour l'attachement :")
         for idx_c, item in enumerate(st.session_state.liste_consommations):
             col_txt, col_sup = st.columns([4, 1])
             with col_txt:
-                st.markdown(f"<span class='badge-materiau'>📦 {item['produit']} : {item['quantite']} {item['unite']}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span class='tag-materiau'>📦 {item['produit']} : <b>{item['quantite']} {item['unite']}</b></span>", unsafe_allow_html=True)
             with col_sup:
-                if st.button("❌", key=f"del_{idx_c}"):
+                if st.button("Supprimer", key=f"del_{idx_c}"):
                     st.session_state.liste_consommations.pop(idx_c)
                     st.rerun()
 
-    with st.expander("➕ Ajouter un matériau consommé", expanded=True):
+    with st.expander("➕ Enregistrer un matériau consommé", expanded=True):
         cp1, cp2, cp3 = st.columns([2, 1, 1])
         with cp1:
-            nouveau_mat = st.selectbox("Matériau", config["materiaux"], key="ajout_mat")
+            nouveau_mat = st.selectbox("Produit appliqué", config["materiaux"], key="ajout_mat")
         with cp2:
             nouvelle_qte = st.number_input("Quantité", min_value=0.0, step=1.0, format="%.2f", key="ajout_qte")
         with cp3:
-            nouvelle_uni = st.selectbox("Unité", ["Seaux/Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "Cartouches", "U"], key="ajout_uni")
+            nouvelle_uni = st.selectbox("Conditionnement", ["Seaux/Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "Cartouches", "U"], key="ajout_uni")
 
-        if st.button("➕ Ajouter à la liste", use_container_width=True):
+        if st.button("Ajouter le produit au registre", use_container_width=True):
             if nouvelle_qte > 0:
                 st.session_state.liste_consommations.append({
                     "produit": nouveau_mat,
@@ -348,28 +414,27 @@ with tab_saisie:
                 })
                 st.rerun()
             else:
-                st.warning("⚠️ Indiquez une quantité supérieure à 0.")
+                st.warning("⚠️ Précisez une quantité supérieure à 0.")
 
     st.write("---")
-    st.markdown("### 📸 Photos du chantier")
+    st.markdown("##### 📸 Pièces Jointes & Justificatifs")
     photos_galerie = st.file_uploader(
-        "Prenez ou sélectionnez vos photos",
+        "Photos justificatives de l'ouvrage (Sélection multiple)",
         type=["jpg", "jpeg", "png"],
         accept_multiple_files=True
     )
-    legende = st.text_input("💬 Observation", placeholder="Ex : Travail soigné, surface préparée...")
+    legende = st.text_input("Observations techniques particulières", placeholder="Ex : Support brossé et dépoussiéré avant couche primaire...")
 
     st.write("")
-    
     st.markdown('<div class="btn-valider">', unsafe_allow_html=True)
-    envoyer_btn = st.button("✅ ENVOYER LE RAPPORT DU JOUR", use_container_width=True)
+    envoyer_btn = st.button("TRANSMETTRE LE RAPPORT JOURNALIER", use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
     if envoyer_btn:
         if not macons_presents:
-            st.error("⚠️ Veuillez sélectionner au moins un ouvrier présent.")
+            st.error("⚠️ Veuillez déclarer au moins un ouvrier pour cet ouvrage.")
         elif not photos_galerie:
-            st.error("⚠️ Veuillez ajouter au moins une photo pour le rapport.")
+            st.error("⚠️ La conformité technique impose l'ajout d'au moins une photo justificative.")
         else:
             try:
                 dossier_chantier = clean_folder_name(chantier_sel)
@@ -423,22 +488,22 @@ with tab_saisie:
 
                 st.session_state.liste_consommations = []
                 st.balloons()
-                st.success(f"🎉 Rapport enregistré ! Données et photos dans : 📁 {dossier_chantier} / 📅 {dossier_date}")
+                st.success(f"✅ Rapport validé et intégré au registre officiel : {dossier_chantier} [{dossier_date}]")
             except Exception as e:
-                st.error(f"❌ Erreur lors de l'enregistrement : {e}")
+                st.error(f"❌ Erreur de transmission : {e}")
 
 # -------------------------------------------------------------
-# ONGLET 2 : TABLEAU DE BORD MODERNE
+# ONGLET 2 : ESPACE CADRE & DIRECTION
 # -------------------------------------------------------------
 with tab_admin:
     st.markdown("""
-        <div style='background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); padding: 16px; border-radius: 14px; text-align: center; margin-bottom: 16px;'>
-            <h2 style='color: white; margin: 0; font-size: 20px; font-weight: 700;'>📊 Espace Responsable & Suivi</h2>
-            <p style='color: #94A3B8; margin: 4px 0 0 0; font-size: 13px;'>Synthèses, téléchargements Excel et galeries chantiers</p>
+        <div class='header-cadre' style='background: linear-gradient(135deg, #022C22 0%, #0F172A 100%);'>
+            <h1 class='header-title'>Tableau de Bord & Attachements</h1>
+            <div class='header-sub'>Supervision technique, synthèse des consommations et exports</div>
         </div>
     """, unsafe_allow_html=True)
 
-    pin = st.text_input("Code Administrateur :", type="password", placeholder="Entrez le code...")
+    pin = st.text_input("Authentification Responsable (Code PIN) :", type="password", placeholder="Saisir le code d'accès...")
 
     if pin == ADMIN_PIN:
         df_all = charger_donnees()
@@ -447,33 +512,44 @@ with tab_admin:
         for root, _, files in os.walk(PHOTOS_BASE_DIR):
             total_photos += len([f for f in files if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
 
-        kpi1, kpi2 = st.columns(2)
+        # KPI Metrics Cards
+        kpi1, kpi2, kpi3 = st.columns(3)
         with kpi1:
-            st.metric("Photos Reçues", f"{total_photos} 📸")
+            st.metric("Rapports Validés", f"{len(df_all) if df_all is not None else 0}")
         with kpi2:
-            total_rapports = len(df_all) if df_all is not None else 0
-            st.metric("Rapports Validés", f"{total_rapports} 📝")
+            st.metric("Documentation Photo", f"{total_photos} clichés")
+        with kpi3:
+            projets_actifs = len(df_all["Chantier"].dropna().unique()) if df_all is not None and not df_all.empty else 0
+            st.metric("Projets Renseignés", f"{projets_actifs}")
 
         st.write("---")
         
-        if df_all is not None and not df_all.empty:
-            excel_bytes = generer_rapport_excel(df_all)
-            st.download_button(
-                label="📊 TÉLÉCHARGER LE RAPPORT EXCEL (.xlsx)",
-                data=excel_bytes,
-                file_name=f"Rapport_Mensuel_{date.today()}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
-            )
-        else:
-            st.info("ℹ️ Aucune donnée enregistrée pour le moment.")
+        # EXPORTS DOCUMENTAIRES
+        st.markdown("##### 📑 Exportations Documentaires Officielles")
+        c_exp1, c_exp2 = st.columns([1, 1])
+        
+        with c_exp1:
+            if df_all is not None and not df_all.empty:
+                excel_bytes = generer_rapport_excel(df_all)
+                st.download_button(
+                    label="📊 EXPORT CLASSEUR EXCEL (.XLSX)",
+                    data=excel_bytes,
+                    file_name=f"Synthese_Chantiers_{date.today()}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+            else:
+                st.button("Export Excel (En attente de données)", disabled=True, use_container_width=True)
+
+        with c_exp2:
+            st.caption("Le classeur inclut : Synthèse des surfaces, ratios de consommation, pointage des équipes et journal brut d'exécution.")
 
         st.write("---")
         
+        # ARCHIVES PHOTOS PAR CHANTIER
         dossiers_chantiers = [d for d in os.listdir(PHOTOS_BASE_DIR) if os.path.isdir(os.path.join(PHOTOS_BASE_DIR, d))]
-
         if dossiers_chantiers:
-            st.markdown("### 📦 Télécharger ZIP Photos")
+            st.markdown("##### 📁 Dossiers Justificatifs Photographiques")
             for d_ch in sorted(dossiers_chantiers):
                 dir_ch = os.path.join(PHOTOS_BASE_DIR, d_ch)
                 fichiers_total = []
@@ -489,20 +565,22 @@ with tab_admin:
                             rel_p = os.path.relpath(f_abs, PHOTOS_BASE_DIR)
                             zf.write(f_abs, arcname=rel_p)
 
-                    c_info, c_btn = st.columns([2, 1])
+                    c_info, c_btn = st.columns([3, 1])
                     with c_info:
-                        st.markdown(f"📁 **{d_ch}** ({len(fichiers_total)} photos)")
+                        st.markdown(f"**{d_ch}** — `{len(fichiers_total)} photos classées par date d'intervention`")
                     with c_btn:
-                        st.download_button(label=f"⬇️ ZIP", data=zip_buf.getvalue(), file_name=f"photos_{d_ch}.zip", mime="application/zip", key=f"z_{d_ch}", use_container_width=True)
+                        st.download_button(label=f"Télécharger ZIP", data=zip_buf.getvalue(), file_name=f"Photos_{d_ch}.zip", mime="application/zip", key=f"z_{d_ch}", use_container_width=True)
 
         st.write("---")
         
+        # REGISTRE D'ATTACHEMENT (FICHES TECHNIQUES)
         if df_all is not None and not df_all.empty and "Chantier" in df_all.columns:
+            st.markdown("##### 🔍 Registre d'Attachement & Suivi des Ouvrages")
             chantiers_bruts = [c for c in df_all["Chantier"].dropna().unique() if not str(c).startswith("2026-") and str(c).strip()]
-            f_proj = st.selectbox("🔍 Filtrer les fiches par chantier :", ["Tous les chantiers"] + list(chantiers_bruts))
+            f_proj = st.selectbox("Filtrer par projet / chantier :", ["Tous les projets"] + list(chantiers_bruts))
 
             df_show = df_all.copy()
-            if f_proj != "Tous les chantiers":
+            if f_proj != "Tous les projets":
                 df_show = df_show[df_show["Chantier"] == f_proj]
 
             for _, row in df_show.iloc[::-1].iterrows():
@@ -511,29 +589,30 @@ with tab_admin:
 
                 conso_val = str(row.get("Consommation", "")).strip()
                 if not conso_val or conso_val == "nan" or conso_val == "Aucun":
-                    badge_conso_html = "<span style='color: #94A3B8; font-size: 12px;'>Aucun produit renseigné</span>"
+                    badge_conso_html = "<span style='color: #94A3B8; font-size: 12px; font-style: italic;'>Aucune consommation déclarée</span>"
                 else:
                     items_conso = conso_val.split(" | ")
-                    badge_conso_html = "".join([f"<span class='badge-materiau'>🧪 {c}</span>" for c in items_conso])
+                    badge_conso_html = "".join([f"<span class='tag-materiau'>🧪 {c}</span>" for c in items_conso])
 
                 st.markdown(f"""
-                    <div class='card-rapport'>
-                        <div style='display: flex; justify-content: space-between; align-items: center;'>
-                            <span class='badge-chantier'>🏢 {row.get("Chantier", "")}</span>
-                            <span class='badge-date'>📅 {row.get("Date", "")}</span>
+                    <div class='card-intervention'>
+                        <div class='card-header-flex'>
+                            <span class='tag-projet'>🏢 {row.get("Chantier", "")}</span>
+                            <span class='tag-date'>📅 {row.get("Date", "")}</span>
                         </div>
-                        <div style='margin-top: 6px;'>
+                        <div style='margin-bottom: 8px;'>
                             <span class='tag-corps'>🛠️ {row.get("Corps_d_etat", "")}</span>
                             <span class='tag-rendement'>📏 {row.get("Rendement", "")} {row.get("Unite", "")}</span>
+                            <span style='margin-left: 8px; color: #64748B; font-size: 12px; font-weight: 500;'>Phase : {row.get("Phase", "")}</span>
                         </div>
-                        <div style='margin-top: 8px;'>
+                        <div style='margin: 10px 0 6px 0;'>
                             {badge_conso_html}
                         </div>
-                        <div style='color: #64748B; font-size: 13px; margin-top: 8px;'>
-                            👷 <b>Équipe :</b> {row.get("Effectif", "")}
+                        <div style='color: #475569; font-size: 13px; margin-top: 6px;'>
+                            👷 <b>Effectif présent :</b> {row.get("Effectif", "")}
                         </div>
-                        <div style='color: #475569; font-size: 13px; margin-top: 4px; font-style: italic;'>
-                            💬 {row.get("Legende", "")}
+                        <div style='color: #334155; font-size: 13px; margin-top: 4px; font-style: italic;'>
+                            💬 <b>Note de chantier :</b> {row.get("Legende", "R.A.S")}
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
@@ -552,19 +631,19 @@ with tab_admin:
                                 break
 
                 if valid_paths:
-                    cols = st.columns(len(valid_paths) if len(valid_paths) <= 3 else 3)
+                    cols = st.columns(min(len(valid_paths), 4))
                     for i, p_img in enumerate(valid_paths):
                         try:
-                            cols[i % 3].image(Image.open(p_img), use_container_width=True)
+                            cols[i % 4].image(Image.open(p_img), use_container_width=True)
                         except Exception:
                             pass
                 st.write("")
 
-        with st.expander("⚙️ Options avancées"):
+        with st.expander("⚙️ Maintenance du système"):
             if st.button("🗑️ Réinitialiser le registre CSV"):
                 if os.path.exists(CSV_FILE):
                     os.remove(CSV_FILE)
                     st.rerun()
 
     elif pin != "":
-        st.error("❌ Code secret incorrect.")
+        st.error("❌ Code d'accès non autorisé.")
