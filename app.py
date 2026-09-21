@@ -13,10 +13,10 @@ from openpyxl.utils import get_column_letter
 
 st.set_page_config(page_title="Chantier & Suivi", page_icon="📱", layout="centered")
 
-# --- CSS DU BOUTON VERT ET DU DESIGN MOBILE ---
+# --- DESIGN DU BOUTON VERT ---
 st.markdown("""
     <style>
-    div[data-testid="stFormSubmitButton"] > button {
+    div.stButton > button {
         background-color: #10B981 !important;
         color: white !important;
         font-size: 18px !important;
@@ -27,7 +27,7 @@ st.markdown("""
         width: 100% !important;
         box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3) !important;
     }
-    div[data-testid="stFormSubmitButton"] > button:hover {
+    div.stButton > button:hover {
         background-color: #059669 !important;
         color: white !important;
     }
@@ -82,8 +82,7 @@ CONFIG_DEFAUT = {
         "Primaire d'accrochage",
         "PAX (Rouleau bitume)",
         "Micro-béton B300",
-        "Silicone / Mastic joint",
-        "Autre"
+        "Silicone / Mastic joint"
     ]
 }
 
@@ -111,10 +110,8 @@ def charger_donnees():
     if not os.path.exists(CSV_FILE):
         return None
     try:
-        # Essai avec séparateur point-virgule
         df = pd.read_csv(CSV_FILE, sep=';', encoding='utf-8-sig', on_bad_lines='skip')
         if len(df.columns) <= 1:
-            # Essai avec séparateur virgule
             df = pd.read_csv(CSV_FILE, sep=',', encoding='utf-8-sig', on_bad_lines='skip')
         return df
     except Exception:
@@ -156,7 +153,7 @@ def generer_rapport_excel(df_source):
             col_letter = get_column_letter(col[0].column)
             ws.column_dimensions[col_letter].width = max(max_len + 4, 12)
 
-    # 1. Synthèse
+    # Feuille 1: Synthèse
     ws1 = wb.create_sheet(title="Synthèse Chantiers")
     headers1 = ["Chantier", "Surface Réalisée (m²)", "Linéaire Réalisé (ML)", "Unités (U)", "Interventions"]
     ws1.append(headers1)
@@ -171,18 +168,18 @@ def generer_rapport_excel(df_source):
         ws1.append([ch, round(m2, 2), round(ml, 2), round(u, 2), len(sub)])
     styliser_feuille(ws1, headers1)
 
-    # 2. Consommation
+    # Feuille 2: Consommation
     ws2 = wb.create_sheet(title="Consommation Matériaux")
     headers2 = ["Date", "Chantier", "Corps d'État", "Matériaux Consommés", "Remarques"]
     ws2.append(headers2)
     for _, r in df_source.iterrows():
-        c_mat = r.get("Consommation", "")
-        if pd.isna(c_mat) or not str(c_mat).strip() or str(c_mat) == "nan":
-            c_mat = r.get("Materiau", "-")
-        ws2.append([r.get("Date", ""), r.get("Chantier", ""), r.get("Corps_d_etat", ""), str(c_mat), r.get("Legende", "")])
+        c_mat = str(r.get("Consommation", "")).strip()
+        if not c_mat or c_mat == "nan":
+            c_mat = "Aucun produit"
+        ws2.append([r.get("Date", ""), r.get("Chantier", ""), r.get("Corps_d_etat", ""), c_mat, r.get("Legende", "")])
     styliser_feuille(ws2, headers2)
 
-    # 3. Effectif
+    # Feuille 3: Effectif
     ws3 = wb.create_sheet(title="Pointage Ouvriers")
     headers3 = ["Date", "Chantier", "Corps d'État", "Effectif Présent", "Nombre d'Ouvriers"]
     ws3.append(headers3)
@@ -190,14 +187,14 @@ def generer_rapport_excel(df_source):
         ws3.append([r.get("Date", ""), r.get("Chantier", ""), r.get("Corps_d_etat", ""), r.get("Effectif", ""), r.get("Nb_Ouvriers", "")])
     styliser_feuille(ws3, headers3)
 
-    # 4. Journal Détaillé
+    # Feuille 4: Journal
     ws4 = wb.create_sheet(title="Journal Détaillé")
     headers4 = ["Date", "Chantier", "Corps d'État", "Phase", "Rendement", "Unité", "Consommation", "Effectif", "Observation"]
     ws4.append(headers4)
     for _, r in df_source.iterrows():
-        c_mat = r.get("Consommation", "")
-        if pd.isna(c_mat) or not str(c_mat).strip() or str(c_mat) == "nan":
-            c_mat = r.get("Materiau", "-")
+        c_mat = str(r.get("Consommation", "")).strip()
+        if not c_mat or c_mat == "nan":
+            c_mat = "-"
         ws4.append([
             r.get("Date", ""),
             r.get("Chantier", ""),
@@ -205,7 +202,7 @@ def generer_rapport_excel(df_source):
             r.get("Phase", ""),
             pd.to_numeric(r.get("Rendement", 0), errors='coerce') or 0,
             r.get("Unite", ""),
-            str(c_mat),
+            c_mat,
             r.get("Effectif", ""),
             r.get("Legende", "")
         ])
@@ -225,142 +222,142 @@ tab_saisie, tab_admin = st.tabs(["📲 Saisie Chantier", "📊 Tableau de Bord"]
 with tab_saisie:
     st.markdown("""
         <div style='background-color: #0F766E; padding: 14px; border-radius: 12px; text-align: center; margin-bottom: 15px;'>
-            <h2 style='color: white; margin: 0; font-size: 20px;'>📱 Pointage & Rapport Journalier</h2>
-            <p style='color: #CCFBF1; margin: 4px 0 0 0; font-size: 13px;'>Renseignez les travaux, consommations et photos</p>
+            <h2 style='color: white; margin: 0; font-size: 20px;'>📱 Saisie du Rapport</h2>
+            <p style='color: #CCFBF1; margin: 4px 0 0 0; font-size: 13px;'>Travaux, effectifs et consommation</p>
         </div>
     """, unsafe_allow_html=True)
 
-    with st.form("formulaire_chantier", clear_on_submit=True):
-        date_jour = st.date_input("📅 Date", value=date.today())
-        chantier_sel = st.selectbox("🏢 Chantier", config["chantiers"])
+    date_jour = st.date_input("📅 Date de la journée", value=date.today())
+    chantier_sel = st.selectbox("🏢 Chantier", config["chantiers"])
+    tache_sel = st.selectbox("🛠️ Corps d'état", config["taches"])
+    phase_travaux = st.selectbox("📌 Étape de réalisation", [
+        "Pendant exécution / application",
+        "Avant travaux (État du support)",
+        "Après achèvement (Finition)",
+        "Détail technique / Gorge / Relevé",
+        "Épreuve d'eau (Test d'étanchéité)",
+        "Autre"
+    ])
 
-        tache_sel = st.selectbox("🛠️ Corps d'état", config["taches"])
-        phase_travaux = st.selectbox("📌 Étape de réalisation", [
-            "Pendant exécution / application",
-            "Avant travaux (État du support)",
-            "Après achèvement (Finition)",
-            "Détail technique / Gorge / Relevé",
-            "Épreuve d'eau (Test d'étanchéité)",
-            "Autre"
-        ])
+    macons_presents = st.multiselect("👷 Ouvriers présents", config["macons"], placeholder="Sélectionnez les noms...")
 
-        macons_presents = st.multiselect(
-            "👷 Ouvriers présents",
-            config["macons"],
-            placeholder="Sélectionnez les noms..."
-        )
+    c_r1, c_r2 = st.columns([2, 1])
+    with c_r1:
+        rendement = st.number_input("📏 Rendement", min_value=0.0, step=1.0, format="%.2f")
+    with c_r2:
+        unite = st.selectbox("Unité", ["m²", "ML", "U"])
 
-        c_r1, c_r2 = st.columns([2, 1])
-        with c_r1:
-            rendement = st.number_input("📏 Rendement réalisé", min_value=0.0, step=1.0, format="%.2f")
-        with c_r2:
-            unite = st.selectbox("Unité", ["m²", "ML", "U"])
+    st.write("---")
+    st.markdown("### 🧪 Matériaux Consommés")
+    
+    # 3 champs fixes pour éviter les bugs de formulaire :
+    col_p1, col_p2, col_p3 = st.columns([2, 1, 1])
+    with col_p1:
+        mat_1 = st.selectbox("Produit 1", ["Aucun"] + config["materiaux"])
+    with col_p2:
+        qte_1 = st.number_input("Qté 1", min_value=0.0, step=1.0, format="%.2f")
+    with col_p3:
+        unite_1 = st.selectbox("Unité 1", ["Seaux/Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "U"])
 
-        st.write("---")
-        st.markdown("### 🧪 Matériaux Consommés")
-        
-        c_m1, c_m2, c_m3 = st.columns([2, 1, 1])
-        with c_m1:
-            mat_principal = st.selectbox("Matériau principal", ["Aucun"] + config["materiaux"])
-        with c_m2:
-            qte_mat = st.number_input("Quantité", min_value=0.0, step=1.0, format="%.2f")
-        with c_m3:
-            unite_mat = st.selectbox("Unité", ["Seaux/Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "U"])
+    col_p4, col_p5, col_p6 = st.columns([2, 1, 1])
+    with col_p4:
+        mat_2 = st.selectbox("Produit 2", ["Aucun"] + config["materiaux"])
+    with col_p5:
+        qte_2 = st.number_input("Qté 2", min_value=0.0, step=1.0, format="%.2f")
+    with col_p6:
+        unite_2 = st.selectbox("Unité 2", ["Seaux/Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "U"])
 
-        autre_mat = st.text_input("Autre produit consommé (si applicable)", placeholder="Ex : 2 rouleaux ARMA TEK, 1 cartouche silicone...")
+    autre_mat = st.text_input("📝 Autre produit (si nécessaire)", placeholder="Ex : 2 cartouches silicone...")
 
-        st.write("---")
-        st.markdown("### 📸 Photos du chantier")
-        photos_galerie = st.file_uploader(
-            "Prenez ou sélectionnez vos photos",
-            type=["jpg", "jpeg", "png"],
-            accept_multiple_files=True
-        )
+    st.write("---")
+    st.markdown("### 📸 Photos du chantier")
+    photos_galerie = st.file_uploader("Touchez ici pour choisir ou prendre des photos", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+    legende = st.text_input("💬 Observation", placeholder="Ex : Surface propre...")
 
-        legende = st.text_input("💬 Remarque / Observation", placeholder="Ex : 2ème couche terminée...")
+    st.write("")
+    
+    # BOUTON VERT ET ACTION D'ENREGISTREMENT
+    if st.button("✅ ENVOYER LE RAPPORT DU JOUR", use_container_width=True):
+        if not macons_presents:
+            st.error("⚠️ Veuillez sélectionner au moins un ouvrier présent.")
+        elif not photos_galerie:
+            st.error("⚠️ Veuillez ajouter au moins une photo pour le rapport.")
+        else:
+            dossier_chantier = clean_folder_name(chantier_sel)
+            dossier_date = str(date_jour)
 
-        st.write("")
-        # BOUTON VERT D'ENVOI
-        submit_btn = st.form_submit_button("✅ ENVOYER LE RAPPORT DU JOUR", use_container_width=True)
+            chemin_cible = os.path.join(PHOTOS_BASE_DIR, dossier_chantier, dossier_date)
+            os.makedirs(chemin_cible, exist_ok=True)
 
-        if submit_btn:
-            if not macons_presents:
-                st.error("⚠️ Veuillez sélectionner au moins un ouvrier présent.")
+            saved_files = []
+            tache_clean = re.sub(r'[^a-zA-Z0-9_-]', '_', tache_sel)[:12]
+
+            for idx, p in enumerate(photos_galerie):
+                ext = ".jpg"
+                if hasattr(p, "name") and os.path.splitext(p.name)[1]:
+                    ext = os.path.splitext(p.name)[1].lower()
+
+                nom_fichier = f"{tache_clean}_{idx+1}{ext}"
+                chemin_disque = os.path.join(chemin_cible, nom_fichier)
+
+                with open(chemin_disque, "wb") as f_img:
+                    f_img.write(p.getbuffer())
+
+                saved_files.append(f"{dossier_chantier}/{dossier_date}/{nom_fichier}")
+
+            # Compilation des consommations
+            consos = []
+            if mat_1 != "Aucun" and qte_1 > 0:
+                consos.append(f"{mat_1}: {qte_1} {unite_1}")
+            if mat_2 != "Aucun" and qte_2 > 0:
+                consos.append(f"{mat_2}: {qte_2} {unite_2}")
+            if autre_mat.strip():
+                consos.append(autre_mat.strip())
+            
+            conso_texte = " | ".join(consos) if consos else "Aucun"
+
+            nouvelle_ligne = {
+                "Date": str(date_jour),
+                "Chantier": str(chantier_sel),
+                "Corps_d_etat": str(tache_sel),
+                "Phase": str(phase_travaux),
+                "Rendement": str(rendement),
+                "Unite": str(unite),
+                "Consommation": conso_texte,
+                "Effectif": ", ".join(macons_presents),
+                "Nb_Ouvriers": len(macons_presents),
+                "Photos": "|".join(saved_files),
+                "Nb_Photos": len(saved_files),
+                "Legende": str(legende).replace(";", " ").replace("|", " ")
+            }
+
+            df_entry = pd.DataFrame([nouvelle_ligne])
+            colonnes_ordre = [
+                "Date", "Chantier", "Corps_d_etat", "Phase", 
+                "Rendement", "Unite", "Consommation",
+                "Effectif", "Nb_Ouvriers", "Photos", "Nb_Photos", "Legende"
+            ]
+            df_entry = df_entry[colonnes_ordre]
+
+            if os.path.exists(CSV_FILE):
+                df_entry.to_csv(CSV_FILE, sep=';', mode='a', header=False, index=False, encoding='utf-8-sig')
             else:
-                dossier_chantier = clean_folder_name(chantier_sel)
-                dossier_date = str(date_jour)
+                df_entry.to_csv(CSV_FILE, sep=';', index=False, encoding='utf-8-sig')
 
-                chemin_cible = os.path.join(PHOTOS_BASE_DIR, dossier_chantier, dossier_date)
-                os.makedirs(chemin_cible, exist_ok=True)
-
-                saved_files = []
-                tache_clean = re.sub(r'[^a-zA-Z0-9_-]', '_', tache_sel)[:12]
-
-                if photos_galerie:
-                    for idx, p in enumerate(photos_galerie):
-                        ext = ".jpg"
-                        if hasattr(p, "name") and os.path.splitext(p.name)[1]:
-                            ext = os.path.splitext(p.name)[1].lower()
-
-                        nom_fichier = f"{tache_clean}_{idx+1}{ext}"
-                        chemin_disque = os.path.join(chemin_cible, nom_fichier)
-
-                        with open(chemin_disque, "wb") as f_img:
-                            f_img.write(p.getbuffer())
-
-                        saved_files.append(f"{dossier_chantier}/{dossier_date}/{nom_fichier}")
-
-                # Consommation globale
-                consos = []
-                if mat_principal != "Aucun" and qte_mat > 0:
-                    consos.append(f"{mat_principal}: {qte_mat} {unite_mat}")
-                if autre_mat.strip():
-                    consos.append(autre_mat.strip())
-                conso_texte = " | ".join(consos) if consos else "Aucun"
-
-                nouvelle_ligne = {
-                    "Date": str(date_jour),
-                    "Chantier": str(chantier_sel),
-                    "Corps_d_etat": str(tache_sel),
-                    "Phase": str(phase_travaux),
-                    "Rendement": str(rendement),
-                    "Unite": str(unite),
-                    "Consommation": conso_texte,
-                    "Effectif": ", ".join(macons_presents),
-                    "Nb_Ouvriers": len(macons_presents),
-                    "Photos": "|".join(saved_files),
-                    "Nb_Photos": len(saved_files),
-                    "Legende": str(legende).replace(";", " ").replace("|", " ")
-                }
-
-                df_entry = pd.DataFrame([nouvelle_ligne])
-                colonnes_ordre = [
-                    "Date", "Chantier", "Corps_d_etat", "Phase", 
-                    "Rendement", "Unite", "Consommation",
-                    "Effectif", "Nb_Ouvriers", "Photos", "Nb_Photos", "Legende"
-                ]
-                df_entry = df_entry[colonnes_ordre]
-
-                if os.path.exists(CSV_FILE):
-                    df_entry.to_csv(CSV_FILE, sep=';', mode='a', header=False, index=False, encoding='utf-8-sig')
-                else:
-                    df_entry.to_csv(CSV_FILE, sep=';', index=False, encoding='utf-8-sig')
-
-                st.balloons()
-                st.success(f"🎉 Rapport envoyé avec succès ! Données et photos classées dans : 📁 {dossier_chantier} / 📅 {dossier_date}")
+            st.balloons()
+            st.success(f"🎉 Rapport enregistré ! Photos classées dans : 📁 {dossier_chantier} / 📅 {dossier_date}")
 
 # -------------------------------------------------------------
-# ONGLET 2 : TABLEAU DE BORD RESPONSABLE
+# ONGLET 2 : TABLEAU DE BORD
 # -------------------------------------------------------------
 with tab_admin:
     st.markdown("""
         <div style='background-color: #1E293B; padding: 14px; border-radius: 12px; text-align: center; margin-bottom: 15px;'>
-            <h2 style='color: white; margin: 0; font-size: 20px;'>📊 Tableau de Bord Chantier</h2>
-            <p style='color: #94A3B8; margin: 4px 0 0 0; font-size: 13px;'>Téléchargements photos et rapport Excel</p>
+            <h2 style='color: white; margin: 0; font-size: 20px;'>📊 Tableau de Bord</h2>
         </div>
     """, unsafe_allow_html=True)
 
-    pin = st.text_input("Code Administrateur :", type="password", placeholder="Entrez le code...")
+    pin = st.text_input("Code Administrateur :", type="password", placeholder="Code...")
 
     if pin == ADMIN_PIN:
         df_all = charger_donnees()
@@ -371,31 +368,29 @@ with tab_admin:
 
         kpi1, kpi2 = st.columns(2)
         with kpi1:
-            st.metric("Photos Reçues", f"{total_photos} 📸")
+            st.metric("Photos", f"{total_photos} 📸")
         with kpi2:
             total_rapports = len(df_all) if df_all is not None else 0
-            st.metric("Rapports Validés", f"{total_rapports}")
+            st.metric("Rapports", f"{total_rapports}")
 
         st.write("---")
-        st.markdown("### 📊 Télécharger le Rapport Excel (.xlsx)")
-
         if df_all is not None and not df_all.empty:
             excel_bytes = generer_rapport_excel(df_all)
             st.download_button(
-                label="📥 TÉLÉCHARGER LE RAPPORT EXCEL (.xlsx)",
+                label="📊 TÉLÉCHARGER LE RAPPORT EXCEL (.xlsx)",
                 data=excel_bytes,
-                file_name=f"Rapport_Mensuel_Chantiers_{date.today()}.xlsx",
+                file_name=f"Rapport_Mensuel_{date.today()}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True
             )
         else:
-            st.info("ℹ️ Aucune donnée enregistrée dans le tableau pour le moment.")
+            st.info("Aucune donnée enregistrée.")
 
         st.write("---")
-        st.markdown("### 📦 Télécharger les Photos")
         dossiers_chantiers = [d for d in os.listdir(PHOTOS_BASE_DIR) if os.path.isdir(os.path.join(PHOTOS_BASE_DIR, d))]
 
         if dossiers_chantiers:
+            st.markdown("### 📦 Télécharger ZIP Photos")
             for d_ch in sorted(dossiers_chantiers):
                 dir_ch = os.path.join(PHOTOS_BASE_DIR, d_ch)
                 fichiers_total = []
@@ -413,23 +408,14 @@ with tab_admin:
 
                     c_info, c_btn = st.columns([2, 1])
                     with c_info:
-                        st.markdown(f"📁 **{d_ch}** ({len(fichiers_total)} photos classées par date)")
+                        st.markdown(f"📁 **{d_ch}** ({len(fichiers_total)} ph.)")
                     with c_btn:
-                        st.download_button(
-                            label=f"⬇️ Télécharger ZIP",
-                            data=zip_buf.getvalue(),
-                            file_name=f"photos_{d_ch}_{date.today()}.zip",
-                            mime="application/zip",
-                            key=f"zip_{d_ch}",
-                            use_container_width=True
-                        )
+                        st.download_button(label=f"⬇️ ZIP", data=zip_buf.getvalue(), file_name=f"photos_{d_ch}.zip", mime="application/zip", key=f"z_{d_ch}", use_container_width=True)
 
         st.write("---")
-
-        # Cartes visuelles de suivi
         if df_all is not None and not df_all.empty and "Chantier" in df_all.columns:
-            liste_projets = ["Tous les chantiers"] + list([c for c in df_all["Chantier"].dropna().unique() if not str(c).startswith("2026-")])
-            f_proj = st.selectbox("🔍 Filtrer les fiches :", liste_projets)
+            chantiers_bruts = [c for c in df_all["Chantier"].dropna().unique() if not str(c).startswith("2026-")]
+            f_proj = st.selectbox("🔍 Filtrer les fiches :", ["Tous les chantiers"] + chantiers_bruts)
 
             df_show = df_all.copy()
             if f_proj != "Tous les chantiers":
@@ -439,9 +425,9 @@ with tab_admin:
                 if str(row.get("Chantier", "")).startswith("2026-"):
                     continue
 
-                conso_val = row.get("Consommation", "")
-                if pd.isna(conso_val) or not str(conso_val).strip() or str(conso_val) == "nan":
-                    conso_val = row.get("Materiau", "-")
+                conso_val = str(row.get("Consommation", "")).strip()
+                if not conso_val or conso_val == "nan":
+                    conso_val = "Aucun"
 
                 with st.container():
                     st.markdown(f"""
@@ -484,12 +470,11 @@ with tab_admin:
                                 pass
                     st.write("")
 
-        with st.expander("⚙️ Options avancées"):
-            if st.button("🗑️ Réinitialiser le registre CSV"):
+        with st.expander("⚙️ Avancé"):
+            if st.button("🗑️ Réinitialiser CSV"):
                 if os.path.exists(CSV_FILE):
                     os.remove(CSV_FILE)
-                    st.success("CSV réinitialisé.")
                     st.rerun()
 
     elif pin != "":
-        st.error("❌ Code secret incorrect.")
+        st.error("❌ Code incorrect.")
