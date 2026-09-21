@@ -3,14 +3,18 @@ import pandas as pd
 from datetime import date
 import os
 import json
+import io
+import zipfile
+from PIL import Image
 
-st.set_page_config(page_title="Suivi Chantier & Rendement", page_icon="🏗️", layout="centered")
+st.set_page_config(page_title="Suivi Photos & Rendement Chantier", page_icon="📸", layout="wide")
 
-os.makedirs("photos_chantier", exist_ok=True)
+PHOTOS_DIR = "photos_chantier"
+os.makedirs(PHOTOS_DIR, exist_ok=True)
 CONFIG_FILE = "config_chantier.json"
 CSV_FILE = "suivi_journalier_chantiers.csv"
+ADMIN_PIN = "2026"
 
-# Configuration complète avec vos chantiers, maçons et corps d'état exacts
 CONFIG_DEFAUT = {
     "chantiers": [
         "CAC-31-24(oran)",
@@ -21,49 +25,18 @@ CONFIG_DEFAUT = {
         "ESC-16-24(ALGER)"
     ],
     "macons": [
-        "ADDA Abbess",
-        "MEKHACHEF DJAMEL",
-        "MESTEFAOUI AHMED",
-        "ARGOUB HALIM",
-        "FEHIM CHIBANI AZZOUZ",
-        "TAIBI REDA",
-        "ABED OMAR",
-        "ZEGHDAN ABDELKADER",
-        "BAGHDADI ALI",
-        "BOUKHELIF KAMEL",
-        "MOKHTARI Omar",
-        "GHEZINI Habib",
-        "BERACHEMI AHMED",
-        "ARAR AISSA",
-        "MOKHTARI Djelloul",
-        "HAFDI Rachid",
-        "BENHAMMADI Mohamed",
-        "MOUISSI WALID",
-        "BENSEMICHA MEROUANE",
-        "TOUATI Zouaoui",
-        "GHRIBI MOHAMED",
-        "TAHAR BOUZIAN YOUCEF"
+        "ADDA Abbess", "MEKHACHEF DJAMEL", "MESTEFAOUI AHMED", "ARGOUB HALIM",
+        "FEHIM CHIBANI AZZOUZ", "TAIBI REDA", "ABED OMAR", "ZEGHDAN ABDELKADER",
+        "BAGHDADI ALI", "BOUKHELIF KAMEL", "MOKHTARI Omar", "GHEZINI Habib",
+        "BERACHEMI AHMED", "ARAR AISSA", "MOKHTARI Djelloul", "HAFDI Rachid",
+        "BENHAMMADI Mohamed", "MOUISSI WALID", "BENSEMICHA MEROUANE", "TOUATI Zouaoui",
+        "GHRIBI MOHAMED", "TAHAR BOUZIAN YOUCEF"
     ],
     "taches": [
-        "BACHE A EAU",
-        "BRICOL",
-        "BRICOL ELASTOTEK",
-        "BRICOL SILICONE",
-        "BRICOL SOUS CARRELAGE",
-        "coupe-feu",
-        "Couvre-joint",
-        "DALLE Cheminée",
-        "ELASTOTEK",
-        "Forme de pente",
-        "GOURGE",
-        "JOINT DE DILATATION",
-        "PARE-VAPEUR",
-        "PAX",
-        "SOKLE PARE-VAPEUR",
-        "SOUS CARRELAGE",
-        "BRICOL PARE-VAPEUR",
-        "ELASTOTEK SAUPOUDRAGE",
-        "BRICOL Cheminée"
+        "BACHE A EAU", "BRICOL", "BRICOL ELASTOTEK", "BRICOL SILICONE", "BRICOL SOUS CARRELAGE",
+        "coupe-feu", "Couvre-joint", "DALLE Cheminée", "ELASTOTEK", "Forme de pente",
+        "GOURGE", "JOINT DE DILATATION", "PARE-VAPEUR", "PAX", "SOKLE PARE-VAPEUR",
+        "SOUS CARRELAGE", "BRICOL PARE-VAPEUR", "ELASTOTEK SAUPOUDRAGE", "BRICOL Cheminée"
     ]
 }
 
@@ -82,172 +55,204 @@ def sauver_config(cfg):
 
 config = charger_config()
 
-tab_saisie, tab_admin = st.tabs(["📲 Saisie Journalière (Chantier)", "⚙️ Configuration (Ajouter / Modifier)"])
+tab_saisie, tab_admin = st.tabs(["📸 Prise & Envoi des Photos", "🔒 Galerie & Archive Admin"])
 
 # -------------------------------------------------------------
-# ONGLET 1 : SAISIE TERRAIN (MAÇONS / APPLICATEURS)
+# ONGLET 1 : SAISIE TERRAIN ULTRA-CENTRÉE PHOTOS
 # -------------------------------------------------------------
 with tab_saisie:
     st.markdown("""
-        <div style='background-color: #1E3A8A; padding: 10px; border-radius: 8px; text-align: center;'>
-            <h3 style='color: white; margin: 0;'>🏗️ Pointage & Rendement Journalier</h3>
-            <p style='color: #E2E8F0; margin: 0; font-size: 13px;'>Sélectionnez les options et enregistrez le travail du jour</p>
+        <div style='background-color: #0F766E; padding: 12px; border-radius: 8px; text-align: center;'>
+            <h2 style='color: white; margin: 0;'>📸 Journal Photos & Travaux de Chantier</h2>
+            <p style='color: #CCFBF1; margin: 0; font-size: 14px;'>Prenez les photos de l'avancement, indiquez le travail et envoyez direct</p>
         </div>
     """, unsafe_allow_html=True)
     st.write("")
 
-    with st.form("form_saisie_chantier", clear_on_submit=True):
+    with st.form("form_photos_chantier", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
-            date_jour = st.date_input("📅 Date du jour", value=date.today())
-        with col2:
+            date_jour = st.date_input("📅 Date de prise de vue", value=date.today())
             chantier_sel = st.selectbox("🏢 Chantier", config["chantiers"])
+        with col2:
+            tache_sel = st.selectbox("🛠️ Corps d'état concerné", config["taches"])
+            phase_travaux = st.selectbox("📌 Étape de la photo", [
+                "Pendant l'application / exécution",
+                "Avant travaux (État du support)",
+                "Après achèvement (Résultat final)",
+                "Détail technique / Finition / Gorge",
+                "Épreuve d'eau (Test d'étanchéité)",
+                "Autre"
+            ])
 
-        tache_sel = st.selectbox("🛠️ Corps d'état / Travaux réalisés", config["taches"])
+        col_m, col_r, col_u = st.columns([2, 1, 1])
+        with col_m:
+            macons_presents = st.multiselect("👷 Équipe présente", config["macons"])
+        with col_r:
+            rendement = st.number_input("📏 Rendement réalisé", min_value=0.0, step=1.0, format="%.2f")
+        with col_u:
+            unite = st.selectbox("Unité", ["m²", "ML", "U"])
 
-        macons_presents = st.multiselect(
-            "👷 Effectif présent (Sélectionnez un ou plusieurs ouvriers)",
-            config["macons"],
-            help="Sélectionnez les personnes présentes sur ce travail"
-        )
-
-        col3, col4 = st.columns(2)
-        with col3:
-            rendement = st.number_input("📏 Rendement réalisé", min_value=0.0, step=0.5, format="%.2f")
-        with col4:
-            unite = st.selectbox("Unité de mesure", ["m² (Surface)", "ML (Mètre Linéaire)", "U (Unité / Socle)"])
-
-        st.write("---")
-        photos = st.file_uploader(
-            "📸 Photos du travail réalisé (Caméra / Galerie)",
+        st.markdown("### 📷 Vos Photos")
+        photos_uploaded = st.file_uploader(
+            "Prenez les photos avec la caméra ou choisissez depuis la galerie (Plusieurs photos acceptées)",
             type=["jpg", "jpeg", "png"],
             accept_multiple_files=True
         )
 
-        observation = st.text_input("📝 Observation / Remarque éventuelle", placeholder="Ex : Zone A terminée, test d'étanchéité...")
+        legende = st.text_input("💬 Légende / Observation sur la photo", placeholder="Ex : Première couche Elastotek sur terrasse A...")
 
-        submitted = st.form_submit_button("💾 Valider & Enregistrer la Journée", use_container_width=True)
+        submitted = st.form_submit_button("🚀 Envoyer & Sauvegarder les Photos", use_container_width=True)
 
         if submitted:
-            if not macons_presents:
-                st.error("Veuillez sélectionner au moins un ouvrier dans la liste.")
-            elif rendement <= 0:
-                st.warning("Veuillez entrer un rendement supérieur à 0.")
+            if not photos_uploaded:
+                st.error("⚠️ Veuillez ajouter au moins une photo avant de valider.")
+            elif not macons_presents:
+                st.error("⚠️ Veuillez sélectionner au moins un ouvrier dans la liste.")
             else:
-                noms_photos = []
-                if photos:
-                    for p in photos:
-                        nom_pic = f"{date_jour}_{chantier_sel.split('(')[0]}_{p.name}"
-                        with open(os.path.join("photos_chantier", nom_pic), "wb") as f_out:
-                            f_out.write(p.getbuffer())
-                        noms_photos.append(nom_pic)
+                noms_sauvegardes = []
+                chantier_clean = chantier_sel.split('(')[0].replace(" ", "_")
+                tache_clean = tache_sel.replace(" ", "_")[:12]
 
-                ligne = {
+                for idx, p in enumerate(photos_uploaded):
+                    extension = os.path.splitext(p.name)[1].lower()
+                    if extension not in [".jpg", ".jpeg", ".png"]:
+                        extension = ".jpg"
+                    
+                    nom_final = f"{date_jour}_{chantier_clean}_{tache_clean}_{idx+1}{extension}"
+                    chemin_disque = os.path.join(PHOTOS_DIR, nom_final)
+
+                    with open(chemin_disque, "wb") as f_img:
+                        f_img.write(p.getbuffer())
+
+                    noms_sauvegardes.append(nom_final)
+
+                nouvelle_ligne = {
                     "Date": str(date_jour),
                     "Chantier": chantier_sel,
                     "Corps_d_etat": tache_sel,
+                    "Phase": phase_travaux,
                     "Rendement": rendement,
                     "Unite": unite,
-                    "Effectif_Presents": ", ".join(macons_presents),
+                    "Effectif": ", ".join(macons_presents),
                     "Nb_Ouvriers": len(macons_presents),
-                    "Photos": ";".join(noms_photos),
-                    "Observation": observation
+                    "Photos": ";".join(noms_sauvegardes),
+                    "Nb_Photos": len(noms_sauvegardes),
+                    "Legende": legende
                 }
 
-                df_new = pd.DataFrame([ligne])
+                df_entry = pd.DataFrame([nouvelle_ligne])
                 if os.path.exists(CSV_FILE):
-                    df_new.to_csv(CSV_FILE, mode='a', header=False, index=False, encoding='utf-8-sig')
+                    df_entry.to_csv(CSV_FILE, mode='a', header=False, index=False, encoding='utf-8-sig')
                 else:
-                    df_new.to_csv(CSV_FILE, index=False, encoding='utf-8-sig')
+                    df_entry.to_csv(CSV_FILE, index=False, encoding='utf-8-sig')
 
-                st.success("✅ Journée enregistrée avec succès dans le registre central !")
-
-    st.write("---")
-    st.subheader("📋 Dernières saisies enregistrées")
-    if os.path.exists(CSV_FILE):
-        df_hist = pd.read_csv(CSV_FILE, encoding='utf-8-sig')
-        st.dataframe(df_hist.tail(10), use_container_width=True)
-        
-        csv_data = df_hist.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
-        st.download_button(
-            label="📥 Télécharger le registre cumulé (CSV / Excel)",
-            data=csv_data,
-            file_name="registre_journalier_chantiers.csv",
-            mime="text/csv"
-        )
-    else:
-        st.info("Aucune saisie enregistrée pour le moment.")
+                st.success(f"✅ {len(noms_sauvegardes)} Photo(s) envoyée(s) et classée(s) avec succès !")
 
 # -------------------------------------------------------------
-# ONGLET 2 : GESTION DYNAMIQUE DES LISTES (AJOUT / SUPPRESSION)
+# ONGLET 2 : ESPACE ADMIN - GALERIE & TÉLÉCHARGEMENT ZIP
 # -------------------------------------------------------------
 with tab_admin:
-    st.subheader("⚙️ Modifier les listes déroulantes")
-    st.caption("Ajoutez ou supprimez des ouvriers, chantiers ou corps d'état selon vos besoins.")
+    st.subheader("🔒 Espace Responsable")
+    pin = st.text_input("Code Administrateur :", type="password")
 
-    # 1. Effectif
-    st.markdown("#### 👷 Effectif Global")
-    c_m1, c_m2 = st.columns([3, 1])
-    with c_m1:
-        nouveau_macon = st.text_input("Nom du nouvel ouvrier à ajouter", key="new_mac")
-    with c_m2:
-        st.write("")
-        st.write("")
-        if st.button("➕ Ajouter"):
-            if nouveau_macon.strip() and nouveau_macon.strip() not in config["macons"]:
-                config["macons"].append(nouveau_macon.strip())
-                sauver_config(config)
-                st.rerun()
+    if pin == ADMIN_PIN:
+        st.success("🔓 Accès administrateur accordé.")
 
-    macon_a_suppr = st.selectbox("Supprimer un ouvrier :", ["---"] + config["macons"], key="del_mac")
-    if st.button("🗑️ Supprimer cet ouvrier"):
-        if macon_a_suppr != "---":
-            config["macons"].remove(macon_a_suppr)
-            sauver_config(config)
-            st.rerun()
+        sous_onglets = st.tabs(["🖼️ Galerie Photos & Filtres", "📦 Télécharger ZIP Photos", "📋 Registre Chiffré", "⚙️ Configuration"])
 
-    st.write("---")
+        # 1. GALERIE PHOTOS
+        with sous_onglets[0]:
+            st.markdown("### 🖼️ Galerie Photos de Chantier")
+            if os.path.exists(CSV_FILE):
+                df_global = pd.read_csv(CSV_FILE, encoding='utf-8-sig')
+                
+                col_f1, col_f2 = st.columns(2)
+                with col_f1:
+                    filtre_chantier = st.selectbox("Filtrer par Chantier :", ["Tous"] + list(df_global["Chantier"].unique()))
+                with col_f2:
+                    filtre_tache = st.selectbox("Filtrer par Corps d'état :", ["Toutes"] + list(df_global["Corps_d_etat"].unique()))
 
-    # 2. Chantiers
-    st.markdown("#### 🏢 Chantiers")
-    c_c1, c_c2 = st.columns([3, 1])
-    with c_c1:
-        nouveau_chantier = st.text_input("Nouveau chantier à ajouter", key="new_ch")
-    with c_c2:
-        st.write("")
-        st.write("")
-        if st.button("➕ Ajouter Chantier"):
-            if nouveau_chantier.strip() and nouveau_chantier.strip() not in config["chantiers"]:
-                config["chantiers"].append(nouveau_chantier.strip())
-                sauver_config(config)
-                st.rerun()
+                df_filtre = df_global.copy()
+                if filtre_chantier != "Tous":
+                    df_filtre = df_filtre[df_filtre["Chantier"] == filtre_chantier]
+                if filtre_tache != "Toutes":
+                    df_filtre = df_filtre[df_filtre["Corps_d_etat"] == filtre_tache]
 
-    chantier_a_suppr = st.selectbox("Supprimer un chantier :", ["---"] + config["chantiers"], key="del_ch")
-    if st.button("🗑️ Supprimer ce chantier"):
-        if chantier_a_suppr != "---":
-            config["chantiers"].remove(chantier_a_suppr)
-            sauver_config(config)
-            st.rerun()
+                st.write(f"Affichage de **{len(df_filtre)}** enregistrements :")
 
-    st.write("---")
+                for _, row in df_filtre.iterrows():
+                    with st.expander(f"📍 {row['Chantier']} - {row['Corps_d_etat']} ({row['Date']}) | Rendement: {row['Rendement']} {row['Unite']}", expanded=True):
+                        st.caption(f"👷 Équipe: {row['Effectif']} | Étape: {row.get('Phase', '-')} | Observation: {row.get('Legende', '-')}")
+                        
+                        fichiers = str(row['Photos']).split(";")
+                        cols = st.columns(min(len(fichiers), 3))
+                        for i, f_name in enumerate(fichiers):
+                            chemin_f = os.path.join(PHOTOS_DIR, f_name)
+                            if os.path.exists(chemin_f):
+                                try:
+                                    img = Image.open(chemin_f)
+                                    cols[i % 3].image(img, caption=f_name, use_container_width=True)
+                                except:
+                                    cols[i % 3].write(f"Image introuvable : {f_name}")
+            else:
+                st.info("Aucune photo enregistrée.")
 
-    # 3. Corps d'état / Tâches
-    st.markdown("#### 🛠️ Corps d'état & Tâches")
-    c_t1, c_t2 = st.columns([3, 1])
-    with c_t1:
-        nouvelle_tache = st.text_input("Nouveau corps d'état à ajouter", key="new_tk")
-    with c_t2:
-        st.write("")
-        st.write("")
-        if st.button("➕ Ajouter Corps d'état"):
-            if nouvelle_tache.strip() and nouvelle_tache.strip() not in config["taches"]:
-                config["taches"].append(nouvelle_tache.strip())
-                sauver_config(config)
-                st.rerun()
+        # 2. TÉLÉCHARGEMENT ZIP
+        with sous_onglets[1]:
+            st.markdown("### 📦 Télécharger toutes les photos d'un coup (Archive ZIP)")
+            st.write("Récupérez un fichier compressé (.zip) avec toutes les photos classées pour préparer vos rapports.")
 
-    tache_a_suppr = st.selectbox("Supprimer un corps d'état :", ["---"] + config["taches"], key="del_tk")
-    if st.button("🗑️ Supprimer ce corps d'état"):
-        if tache_a_suppr != "---":
-            config["taches"].remove(tache_a_suppr)
-            sauver_config(config)
-            st.rerun()
+            if st.button("🗂️ Générer le fichier ZIP de toutes les photos"):
+                fichiers_disponibles = os.listdir(PHOTOS_DIR)
+                if fichiers_disponibles:
+                    zip_buffer = io.BytesIO()
+                    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+                        for photo in fichiers_disponibles:
+                            full_path = os.path.join(PHOTOS_DIR, photo)
+                            if os.path.isfile(full_path):
+                                zip_file.write(full_path, arcname=photo)
+                    
+                    st.download_button(
+                        label="📥 Télécharger le dossier ZIP des photos",
+                        data=zip_buffer.getvalue(),
+                        file_name=f"photos_chantiers_{date.today()}.zip",
+                        mime="application/zip"
+                    )
+                else:
+                    st.warning("Aucun fichier photo dans le dossier.")
+
+        # 3. REGISTRE EXCEL
+        with sous_onglets[2]:
+            st.markdown("### 📋 Tableau de bord des rendements")
+            if os.path.exists(CSV_FILE):
+                df_all = pd.read_csv(CSV_FILE, encoding='utf-8-sig')
+                st.dataframe(df_all, use_container_width=True)
+                csv_bytes = df_all.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
+                st.download_button("📥 Télécharger le registre (Excel/CSV)", csv_bytes, "registre_chantier.csv", "text/csv")
+            else:
+                st.info("Aucune donnée.")
+
+        # 4. CONFIGURATION
+        with sous_onglets[3]:
+            st.markdown("### ⚙️ Gestion des listes")
+            st.write("**Chantiers :**", ", ".join(config["chantiers"]))
+            n_c = st.text_input("Ajouter Chantier")
+            if st.button("➕ Ajouter Chantier"):
+                if n_c.strip() and n_c.strip() not in config["chantiers"]:
+                    config["chantiers"].append(n_c.strip())
+                    sauver_config(config)
+                    st.rerun()
+
+            st.write("**Ouvriers :**", ", ".join(config["macons"]))
+            n_m = st.text_input("Ajouter Ouvrier")
+            if st.button("➕ Ajouter Ouvrier"):
+                if n_m.strip() and n_m.strip() not in config["macons"]:
+                    config["macons"].append(n_m.strip())
+                    sauver_config(config)
+                    st.rerun()
+
+    elif pin != "":
+        st.error("❌ Code secret incorrect.")
+    else:
+        st.info("Saisissez le code pour accéder à la galerie et aux téléchargements.")
