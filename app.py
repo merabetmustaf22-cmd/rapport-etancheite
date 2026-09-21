@@ -13,7 +13,7 @@ from openpyxl.utils import get_column_letter
 
 st.set_page_config(page_title="Chantier & Suivi", page_icon="📱", layout="centered")
 
-# Style du bouton vert d'envoi
+# --- STYLE DU GROS BOUTON VERT D'ENVOI ---
 st.markdown("""
     <style>
     div.stButton > button {
@@ -149,7 +149,7 @@ def generer_rapport_excel(df_source):
             col_letter = get_column_letter(col[0].column)
             ws.column_dimensions[col_letter].width = max(max_len + 4, 12)
 
-    # Feuille 1: Synthèse
+    # 1. Synthèse
     ws1 = wb.create_sheet(title="Synthèse Chantiers")
     headers1 = ["Chantier", "Surface Réalisée (m²)", "Linéaire Réalisé (ML)", "Unités (U)", "Interventions"]
     ws1.append(headers1)
@@ -164,7 +164,7 @@ def generer_rapport_excel(df_source):
         ws1.append([ch, round(m2, 2), round(ml, 2), round(u, 2), len(sub)])
     styliser_feuille(ws1, headers1)
 
-    # Feuille 2: Consommation
+    # 2. Consommation
     ws2 = wb.create_sheet(title="Consommation Matériaux")
     headers2 = ["Date", "Chantier", "Corps d'État", "Matériaux Consommés", "Remarques"]
     ws2.append(headers2)
@@ -175,7 +175,7 @@ def generer_rapport_excel(df_source):
         ws2.append([r.get("Date", ""), r.get("Chantier", ""), r.get("Corps_d_etat", ""), c_mat, r.get("Legende", "")])
     styliser_feuille(ws2, headers2)
 
-    # Feuille 3: Effectif
+    # 3. Effectif
     ws3 = wb.create_sheet(title="Pointage Ouvriers")
     headers3 = ["Date", "Chantier", "Corps d'État", "Effectif Présent", "Nombre d'Ouvriers"]
     ws3.append(headers3)
@@ -183,7 +183,7 @@ def generer_rapport_excel(df_source):
         ws3.append([r.get("Date", ""), r.get("Chantier", ""), r.get("Corps_d_etat", ""), r.get("Effectif", ""), r.get("Nb_Ouvriers", "")])
     styliser_feuille(ws3, headers3)
 
-    # Feuille 4: Journal Détaillé
+    # 4. Journal Détaillé
     ws4 = wb.create_sheet(title="Journal Détaillé")
     headers4 = ["Date", "Chantier", "Corps d'État", "Phase", "Rendement", "Unité", "Consommation", "Effectif", "Observation"]
     ws4.append(headers4)
@@ -243,27 +243,53 @@ with tab_saisie:
     with c_r2:
         unite = st.selectbox("Unité", ["m²", "ML", "U"])
 
+    # --- SÉLECTION MULTI-PRODUITS AVEC QUANTITÉ & UNITÉ DÉDIÉES ---
     st.write("---")
     st.markdown("### 🧪 Matériaux Consommés")
     
     materiaux_utilises = st.multiselect(
-        "Sélectionnez les produits utilisés :",
+        "Sélectionnez les produits utilisés aujourd'hui :",
         config["materiaux"],
-        placeholder="Choisissez les matériaux..."
+        placeholder="Touchez ici pour choisir un ou plusieurs matériaux..."
     )
 
-    detail_quantites = st.text_input(
-        "Quantités et unités consommées :",
-        placeholder="Ex : 4 seaux Elastotek, 1 rouleau toile, 2 cartouches..."
-    )
+    consommations_detaillees = []
+
+    if materiaux_utilises:
+        st.caption("Précisez la quantité et l'unité pour chaque produit sélectionné :")
+        for idx, prod in enumerate(materiaux_utilises):
+            st.markdown(f"**🔹 {prod}**")
+            col_q, col_u = st.columns([2, 1])
+            with col_q:
+                qte = st.number_input(
+                    f"Quantité ({prod})",
+                    min_value=0.0,
+                    step=1.0,
+                    format="%.2f",
+                    key=f"qte_input_{idx}_{prod}"
+                )
+            with col_u:
+                unite_cond = st.selectbox(
+                    f"Unité ({prod})",
+                    ["Seaux / Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "Cartouches", "U"],
+                    key=f"unite_input_{idx}_{prod}"
+                )
+            if qte > 0:
+                consommations_detaillees.append(f"{prod}: {qte} {unite_cond}")
 
     st.write("---")
     st.markdown("### 📸 Photos du chantier")
-    photos_galerie = st.file_uploader("Touchez ici pour choisir ou prendre des photos", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+    photos_galerie = st.file_uploader(
+        "Touchez ici pour choisir ou prendre des photos",
+        type=["jpg", "jpeg", "png"],
+        accept_multiple_files=True,
+        key="uploader_chantier"
+    )
     legende = st.text_input("💬 Observation", placeholder="Ex : Travail terminé conformément...")
 
     st.write("")
     
+    # GROS BOUTON VERT D'ENVOI
     if st.button("✅ ENVOYER LE RAPPORT DU JOUR", use_container_width=True):
         if not macons_presents:
             st.error("⚠️ Veuillez sélectionner au moins un ouvrier présent.")
@@ -292,15 +318,7 @@ with tab_saisie:
 
                 saved_files.append(f"{dossier_chantier}/{dossier_date}/{nom_fichier}")
 
-            produits_texte = ", ".join(materiaux_utilises) if materiaux_utilises else ""
-            if produits_texte and detail_quantites.strip():
-                conso_finale = f"{produits_texte} ({detail_quantites.strip()})"
-            elif detail_quantites.strip():
-                conso_finale = detail_quantites.strip()
-            elif produits_texte:
-                conso_finale = produits_texte
-            else:
-                conso_finale = "Aucun"
+            conso_finale = " | ".join(consommations_detaillees) if consommations_detaillees else "Aucun"
 
             nouvelle_ligne = {
                 "Date": str(date_jour),
