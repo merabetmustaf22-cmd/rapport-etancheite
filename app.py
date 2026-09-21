@@ -295,7 +295,12 @@ PHOTOS_BASE_DIR = "photos_chantier"
 os.makedirs(PHOTOS_BASE_DIR, exist_ok=True)
 CONFIG_FILE = "config_chantier.json"
 CSV_FILE = "suivi_journalier_chantiers.csv"
-ADMIN_PIN = "2026"
+
+# --- PIN ADMIN SÉCURISÉ ---
+# En local : créez un fichier .streamlit/secrets.toml avec : ADMIN_PIN = "votre_code"
+# Sur Streamlit Cloud : renseignez ADMIN_PIN dans les "Secrets" de l'app (dashboard).
+# Si aucun secret n'est défini, "2026" est utilisé par défaut (à éviter en production).
+ADMIN_PIN = st.secrets.get("ADMIN_PIN", "2026") if hasattr(st, "secrets") else "2026"
 
 COLONNES_OFFICIELLES = [
     "Date", "Chantier", "Corps_d_etat", "Phase", 
