@@ -93,126 +93,139 @@ config = charger_config()
 tab_saisie, tab_admin = st.tabs(["📲 Saisie Chantier", "📊 Tableau de Bord"])
 
 # -------------------------------------------------------------
-# ONGLET 1 : SAISIE CHANTIER AVEC CONSOMMATION MATÉRIAUX
+# ONGLET 1 : SAISIE CHANTIER MULTI-PRODUITS
 # -------------------------------------------------------------
 with tab_saisie:
     st.markdown("""
         <div style='background-color: #0F766E; padding: 14px; border-radius: 12px; text-align: center; margin-bottom: 15px;'>
             <h2 style='color: white; margin: 0; font-size: 20px;'>📱 Pointage, Rendement & Consommation</h2>
-            <p style='color: #CCFBF1; margin: 4px 0 0 0; font-size: 13px;'>Renseignez les travaux, consommations et photos</p>
+            <p style='color: #CCFBF1; margin: 4px 0 0 0; font-size: 13px;'>Renseignez les travaux, matériaux et photos</p>
         </div>
     """, unsafe_allow_html=True)
 
-    with st.form("form_mobile_chantier", clear_on_submit=True):
-        date_jour = st.date_input("📅 Date de la journée", value=date.today())
-        chantier_sel = st.selectbox("🏢 Chantier", config["chantiers"])
+    date_jour = st.date_input("📅 Date de la journée", value=date.today())
+    chantier_sel = st.selectbox("🏢 Chantier", config["chantiers"])
 
-        tache_sel = st.selectbox("🛠️ Travail / Corps d'état", config["taches"])
-        phase_travaux = st.selectbox("📌 Étape de réalisation", [
-            "Pendant exécution / application",
-            "Avant travaux (État du support)",
-            "Après achèvement (Finition)",
-            "Détail technique / Gorge / Relevé",
-            "Épreuve d'eau (Test d'étanchéité)",
-            "Autre"
-        ])
+    tache_sel = st.selectbox("🛠️ Travail / Corps d'état", config["taches"])
+    phase_travaux = st.selectbox("📌 Étape de réalisation", [
+        "Pendant exécution / application",
+        "Avant travaux (État du support)",
+        "Après achèvement (Finition)",
+        "Détail technique / Gorge / Relevé",
+        "Épreuve d'eau (Test d'étanchéité)",
+        "Autre"
+    ])
 
-        macons_presents = st.multiselect(
-            "👷 Ouvriers présents",
-            config["macons"],
-            placeholder="Sélectionnez les noms..."
-        )
+    macons_presents = st.multiselect(
+        "👷 Ouvriers présents",
+        config["macons"],
+        placeholder="Sélectionnez les noms..."
+    )
 
-        c_r1, c_r2 = st.columns([2, 1])
-        with c_r1:
-            rendement = st.number_input("📏 Rendement réalisé", min_value=0.0, step=1.0, format="%.2f")
-        with c_r2:
-            unite = st.selectbox("Unité", ["m²", "ML", "U"])
+    c_r1, c_r2 = st.columns([2, 1])
+    with c_r1:
+        rendement = st.number_input("📏 Rendement réalisé", min_value=0.0, step=1.0, format="%.2f")
+    with c_r2:
+        unite = st.selectbox("Unité", ["m²", "ML", "U"])
 
-        # --- SECTION CONSOMMATION DES MATÉRIAUX ---
-        st.write("---")
-        st.markdown("### 🧪 Consommation des Matériaux")
-        mat_sel = st.selectbox("Produit / Matériau consommé", config["materiaux"])
-        
-        c_q1, c_q2 = st.columns([2, 1])
-        with c_q1:
-            qte_mat = st.number_input("Quantité consommée", min_value=0.0, step=1.0, format="%.2f")
-        with c_q2:
-            unite_mat = st.selectbox("Conditionnement", ["Seaux / Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "Cartouches"])
+    # --- SECTION CONSOMMATION MULTI-PRODUITS DYNAMIQUE ---
+    st.write("---")
+    st.markdown("### 🧪 Consommation des Matériaux")
+    st.caption("Sélectionnez un ou plusieurs produits utilisés aujourd'hui :")
 
-        # --- SECTION PHOTOS ---
-        st.write("---")
-        st.markdown("### 📸 Photos du travail")
-        photos_galerie = st.file_uploader(
-            "Prendre une photo ou importer depuis la galerie",
-            type=["jpg", "jpeg", "png"],
-            accept_multiple_files=True
-        )
+    produits_choisis = st.multiselect(
+        "📦 Produits consommés",
+        config["materiaux"],
+        placeholder="Choisissez les matériaux utilisés..."
+    )
 
-        legende = st.text_input("💬 Remarque / Observation", placeholder="Ex : 2ème couche appliquée...")
+    consommations_saisies = []
+    if produits_choisis:
+        for p_idx, prod in enumerate(produits_choisis):
+            st.markdown(f"**🔹 {prod}**")
+            col_q, col_u = st.columns([2, 1])
+            with col_q:
+                qte = st.number_input(f"Quantité ({prod})", min_value=0.0, step=1.0, format="%.2f", key=f"q_{p_idx}_{prod}")
+            with col_u:
+                unite_cond = st.selectbox(
+                    f"Unité ({prod})",
+                    ["Seaux / Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "Cartouches"],
+                    key=f"u_{p_idx}_{prod}"
+                )
+            if qte > 0:
+                consommations_saisies.append(f"{prod}: {qte} {unite_cond}")
 
-        st.write("")
-        submitted = st.form_submit_button("🚀 ENVOYER LE RAPPORT DU JOUR", use_container_width=True)
+    st.write("---")
+    st.markdown("### 📸 Photos du travail")
+    photos_galerie = st.file_uploader(
+        "Prendre une photo ou importer depuis la galerie",
+        type=["jpg", "jpeg", "png"],
+        accept_multiple_files=True
+    )
 
-        if submitted:
-            if not photos_galerie:
-                st.error("⚠️ Veuillez ajouter au moins une photo.")
-            elif not macons_presents:
-                st.error("⚠️ Veuillez sélectionner au moins un ouvrier présent.")
+    legende = st.text_input("💬 Remarque / Observation", placeholder="Ex : 2 couches + armature...")
+
+    st.write("")
+    if st.button("🚀 ENVOYER LE RAPPORT DU JOUR", use_container_width=True):
+        if not photos_galerie:
+            st.error("⚠️ Veuillez ajouter au moins une photo.")
+        elif not macons_presents:
+            st.error("⚠️ Veuillez sélectionner au moins un ouvrier présent.")
+        else:
+            dossier_chantier = clean_folder_name(chantier_sel)
+            dossier_date = str(date_jour)
+
+            chemin_cible = os.path.join(PHOTOS_BASE_DIR, dossier_chantier, dossier_date)
+            os.makedirs(chemin_cible, exist_ok=True)
+
+            saved_files = []
+            tache_clean = re.sub(r'[^a-zA-Z0-9_-]', '_', tache_sel)[:12]
+
+            for idx, p in enumerate(photos_galerie):
+                ext = ".jpg"
+                if hasattr(p, "name") and os.path.splitext(p.name)[1]:
+                    ext = os.path.splitext(p.name)[1].lower()
+
+                nom_fichier = f"{tache_clean}_{idx+1}{ext}"
+                chemin_disque = os.path.join(chemin_cible, nom_fichier)
+
+                with open(chemin_disque, "wb") as f_img:
+                    f_img.write(p.getbuffer())
+
+                saved_files.append(f"{dossier_chantier}/{dossier_date}/{nom_fichier}")
+
+            conso_texte = " | ".join(consommations_saisies) if consommations_saisies else "Aucun"
+
+            nouvelle_ligne = {
+                "Date": str(date_jour),
+                "Chantier": str(chantier_sel),
+                "Corps_d_etat": str(tache_sel),
+                "Phase": str(phase_travaux),
+                "Rendement": str(rendement),
+                "Unite": str(unite),
+                "Consommation": conso_texte,
+                "Effectif": ", ".join(macons_presents),
+                "Nb_Ouvriers": len(macons_presents),
+                "Photos": "|".join(saved_files),
+                "Nb_Photos": len(saved_files),
+                "Legende": str(legende).replace(";", " ").replace("|", " ")
+            }
+
+            df_entry = pd.DataFrame([nouvelle_ligne])
+            colonnes_ordre = [
+                "Date", "Chantier", "Corps_d_etat", "Phase", 
+                "Rendement", "Unite", "Consommation",
+                "Effectif", "Nb_Ouvriers", "Photos", "Nb_Photos", "Legende"
+            ]
+            df_entry = df_entry[colonnes_ordre]
+
+            if os.path.exists(CSV_FILE):
+                df_entry.to_csv(CSV_FILE, sep=';', mode='a', header=False, index=False, encoding='utf-8-sig')
             else:
-                dossier_chantier = clean_folder_name(chantier_sel)
-                dossier_date = str(date_jour)
-                
-                chemin_cible = os.path.join(PHOTOS_BASE_DIR, dossier_chantier, dossier_date)
-                os.makedirs(chemin_cible, exist_ok=True)
+                df_entry.to_csv(CSV_FILE, sep=';', index=False, encoding='utf-8-sig')
 
-                saved_files = []
-                tache_clean = re.sub(r'[^a-zA-Z0-9_-]', '_', tache_sel)[:12]
-
-                for idx, p in enumerate(photos_galerie):
-                    ext = ".jpg"
-                    if hasattr(p, "name") and os.path.splitext(p.name)[1]:
-                        ext = os.path.splitext(p.name)[1].lower()
-
-                    nom_fichier = f"{tache_clean}_{idx+1}{ext}"
-                    chemin_disque = os.path.join(chemin_cible, nom_fichier)
-
-                    with open(chemin_disque, "wb") as f_img:
-                        f_img.write(p.getbuffer())
-
-                    saved_files.append(f"{dossier_chantier}/{dossier_date}/{nom_fichier}")
-
-                nouvelle_ligne = {
-                    "Date": str(date_jour),
-                    "Chantier": str(chantier_sel),
-                    "Corps_d_etat": str(tache_sel),
-                    "Phase": str(phase_travaux),
-                    "Rendement": str(rendement),
-                    "Unite": str(unite),
-                    "Materiau": str(mat_sel),
-                    "Qte_Consommee": str(qte_mat),
-                    "Unite_Materiau": str(unite_mat),
-                    "Effectif": ", ".join(macons_presents),
-                    "Nb_Ouvriers": len(macons_presents),
-                    "Photos": "|".join(saved_files),
-                    "Nb_Photos": len(saved_files),
-                    "Legende": str(legende).replace(";", " ").replace("|", " ")
-                }
-
-                df_entry = pd.DataFrame([nouvelle_ligne])
-                colonnes_ordre = [
-                    "Date", "Chantier", "Corps_d_etat", "Phase", 
-                    "Rendement", "Unite", "Materiau", "Qte_Consommee", "Unite_Materiau",
-                    "Effectif", "Nb_Ouvriers", "Photos", "Nb_Photos", "Legende"
-                ]
-                df_entry = df_entry[colonnes_ordre]
-
-                if os.path.exists(CSV_FILE):
-                    df_entry.to_csv(CSV_FILE, sep=';', mode='a', header=False, index=False, encoding='utf-8-sig')
-                else:
-                    df_entry.to_csv(CSV_FILE, sep=';', index=False, encoding='utf-8-sig')
-
-                st.success(f"✅ Rapport enregistré ! Photos classées dans : 📁 {dossier_chantier} / 📅 {dossier_date}")
+            st.success(f"✅ Rapport enregistré avec succès ! Photos dans : 📁 {dossier_chantier} / 📅 {dossier_date}")
+            st.rerun()
 
 # -------------------------------------------------------------
 # ONGLET 2 : TABLEAU DE BORD RESPONSABLE
@@ -265,7 +278,7 @@ with tab_admin:
 
                     c_info, c_btn = st.columns([2, 1])
                     with c_info:
-                        st.markdown(f"📁 **{d_ch}** ({len(fichiers_total)} photos par journée)")
+                        st.markdown(f"📁 **{d_ch}** ({len(fichiers_total)} photos par date)")
                     with c_btn:
                         st.download_button(
                             label=f"⬇️ Télécharger ZIP",
@@ -280,7 +293,7 @@ with tab_admin:
         if df_all is not None and not df_all.empty:
             csv_bytes = df_all.to_csv(sep=';', index=False, encoding='utf-8-sig').encode('utf-8-sig')
             st.download_button(
-                label="📊 Télécharger Registre Cumulé (CSV)",
+                label="📊 Télécharger Tout le Registre (Excel/CSV)",
                 data=csv_bytes,
                 file_name="registre_chantier.csv",
                 mime="text/csv",
@@ -289,7 +302,7 @@ with tab_admin:
 
         st.write("---")
 
-        # Cartes détaillées avec Rendement & Consommation
+        # Cartes détaillées avec Rendement & Multi-Consommation
         if df_all is not None and not df_all.empty and "Chantier" in df_all.columns:
             liste_projets = ["Tous les chantiers"] + list([c for c in df_all["Chantier"].dropna().unique() if not str(c).startswith("2026-")])
             f_proj = st.selectbox("🔍 Filtrer les fiches :", liste_projets)
@@ -302,9 +315,9 @@ with tab_admin:
                 if str(row.get("Chantier", "")).startswith("2026-"):
                     continue
 
-                mat_info = ""
-                if "Materiau" in row and pd.notna(row.get("Materiau")):
-                    mat_info = f"🧪 Consommation : <b>{row.get('Qte_Consommee', '')} {row.get('Unite_Materiau', '')}</b> de <b>{row.get('Materiau', '')}</b><br>"
+                conso_val = row.get("Consommation", "")
+                if pd.isna(conso_val) or not str(conso_val).strip() or str(conso_val) == "nan":
+                    conso_val = row.get("Materiau", "Aucun")
 
                 with st.container():
                     st.markdown(f"""
@@ -316,10 +329,10 @@ with tab_admin:
                             <div style='margin-top: 5px;'>
                                 🛠️ {row.get("Corps_d_etat", "")} &nbsp;|&nbsp; 📏 <b>{row.get("Rendement", "")} {row.get("Unite", "")}</b>
                             </div>
-                            <div style='margin-top: 3px; font-size: 13px; color: #0369A1;'>
-                                {mat_info}
+                            <div style='margin-top: 4px; font-size: 13px; color: #0369A1;'>
+                                🧪 <b>Matériaux consommés :</b> {conso_val}
                             </div>
-                            <div style='color: #64748B; font-size: 13px; margin-top: 2px;'>
+                            <div style='color: #64748B; font-size: 13px; margin-top: 3px;'>
                                 👷 {row.get("Effectif", "")}
                             </div>
                         </div>
