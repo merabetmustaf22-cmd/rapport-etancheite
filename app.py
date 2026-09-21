@@ -5,6 +5,7 @@ import os
 import json
 import io
 import zipfile
+import re
 from PIL import Image
 
 st.set_page_config(page_title="Chantier & Suivi", page_icon="📱", layout="centered")
@@ -40,6 +41,10 @@ CONFIG_DEFAUT = {
     ]
 }
 
+def clean_folder_name(name):
+    clean = name.split('(')[0].strip()
+    return re.sub(r'[^a-zA-Z0-9_-]', '_', clean)
+
 def charger_config():
     if os.path.exists(CONFIG_FILE):
         try:
@@ -52,9 +57,6 @@ def charger_config():
 def sauver_config(cfg):
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         json.dump(cfg, f, ensure_ascii=False, indent=2)
-
-def nettoyer_nom_dossier(nom):
-    return nom.split('(')[0].replace(" ", "_").replace("/", "_").strip()
 
 def charger_donnees():
     if not os.path.exists(CSV_FILE):
@@ -127,12 +129,12 @@ with tab_saisie:
             elif not macons_presents:
                 st.error("⚠️ Veuillez sélectionner au moins un ouvrier présent.")
             else:
-                dossier_chantier = nettoyer_nom_dossier(chantier_sel)
-                chemin_dossier = os.path.join(PHOTOS_BASE_DIR, dossier_chantier)
-                os.makedirs(chemin_dossier, exist_ok=True)
+                dossier_chantier = clean_folder_name(chantier_sel)
+                dossier_complet = os.path.join(PHOTOS_BASE_DIR, dossier_chantier)
+                os.makedirs(dossier_complet, exist_ok=True)
 
-                noms_sauvegardes_relatifs = []
-                tache_clean = tache_sel.replace(" ", "_")[:10]
+                saved_files = []
+                tache_clean = re.sub(r'[^a-zA-Z0-9_-]', '_', tache_sel)[:10]
 
                 for idx, p in enumerate(photos_galerie):
                     ext = ".jpg"
@@ -140,12 +142,12 @@ with tab_saisie:
                         ext = os.path.splitext(p.name)[1].lower()
 
                     nom_fichier = f"{date_jour}_{tache_clean}_{idx+1}{ext}"
-                    chemin_fichier_complet = os.path.join(chemin_dossier, nom_fichier)
+                    chemin_dest = os.path.join(dossier_complet, nom_fichier)
 
-                    with open(chemin_fichier_complet, "wb") as f_img:
+                    with open(chemin_dest, "wb") as f_img:
                         f_img.write(p.getbuffer())
 
-                    noms_sauvegardes_relatifs.append(f"{dossier_chantier}/{nom_fichier}")
+                    saved_files.append(f"{dossier_chantier}/{nom_fichier}")
 
                 nouvelle_ligne = {
                     "Date": str(date_jour),
@@ -156,8 +158,8 @@ with tab_saisie:
                     "Unite": str(unite),
                     "Effectif": ", ".join(macons_presents),
                     "Nb_Ouvriers": len(macons_presents),
-                    "Photos": "|".join(noms_sauvegardes_relatifs),
-                    "Nb_Photos": len(noms_sauvegardes_relatifs),
+                    "Photos": "|".join(saved_files),
+                    "Nb_Photos": len(saved_files),
                     "Legende": str(legende).replace(";", " ").replace("|", " ")
                 }
 
@@ -170,7 +172,7 @@ with tab_saisie:
                 else:
                     df_entry.to_csv(CSV_FILE, sep=';', index=False, encoding='utf-8-sig')
 
-                st.success(f"✅ {len(noms_sauvegardes_relatifs)} photo(s) classée(s) dans le dossier [{dossier_chantier}] !")
+                st.success(f"✅ Photos enregistrées dans le dossier dédié : 📁 {dossier_chantier}")
 
 # -------------------------------------------------------------
 # ONGLET 2 : TABLEAU DE BORD RESPONSABLE
@@ -179,7 +181,7 @@ with tab_admin:
     st.markdown("""
         <div style='background-color: #1E293B; padding: 14px; border-radius: 12px; text-align: center; margin-bottom: 15px;'>
             <h2 style='color: white; margin: 0; font-size: 20px;'>📊 Tableau de Bord Chantier</h2>
-            <p style='color: #94A3B8; margin: 4px 0 0 0; font-size: 13px;'>Suivi visuel et dossiers photos par chantier</p>
+            <p style='color: #94A3B8; margin: 4px 0 0 0; font-size: 13px;'>Dossiers séparés par chantier</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -188,148 +190,92 @@ with tab_admin:
     if pin == ADMIN_PIN:
         df_all = charger_donnees()
         
-        total_photos = 0
-        for root, _, files in os.walk(PHOTOS_BASE_DIR):
-            total_photos += len([f for f in files if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
+        # Scanner tous les dossiers réels existants
+        dossiers_dispos = [d for d in os.listdir(PHOTOS_BASE_DIR) if os.path.isdir(os.path.join(PHOTOS_BASE_DIR, d))]
 
-        kpi1, kpi2 = st.columns(2)
-        with kpi1:
-            st.metric("Photos Reçues", f"{total_photos} 📸")
-        with kpi2:
-            total_rapports = len(df_all) if df_all is not None else 0
-            st.metric("Rapports", f"{total_rapports}")
-
-        st.write("---")
-
-        # --- TÉLÉCHARGEMENT ZIP PAR CHANTIER OU GLOBAL ---
-        st.markdown("### 📦 Téléchargements Photos & Données")
-        dossiers_existants = [d for d in os.listdir(PHOTOS_BASE_DIR) if os.path.isdir(os.path.join(PHOTOS_BASE_DIR, d))]
+        st.markdown("### 📦 Télécharger les Dossiers Photos")
         
-        col_sel_ch, col_zip_ch = st.columns([2, 1])
-        with col_sel_ch:
-            option_chantier_zip = st.selectbox("Sélectionnez le chantier à télécharger :", ["Tous les chantiers (Dossiers séparés)"] + dossiers_existants)
+        # Choix de téléchargement séparé
+        choix_dossier = st.selectbox("Sélectionnez le dossier à télécharger :", ["Tous les chantiers (ZIP avec dossiers séparés)"] + dossiers_dispos)
 
-        with col_zip_ch:
-            st.write("")
-            st.write("")
-            zip_buffer = io.BytesIO()
-            with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-                if option_chantier_zip == "Tous les chantiers (Dossiers séparés)":
-                    for root, _, files in os.walk(PHOTOS_BASE_DIR):
-                        for f in files:
-                            chemin_complet = os.path.join(root, f)
-                            arcname = os.path.relpath(chemin_complet, PHOTOS_BASE_DIR)
-                            zip_file.write(chemin_complet, arcname=arcname)
-                    nom_zip = f"tous_chantiers_photos_{date.today()}.zip"
-                else:
-                    dossier_cible = os.path.join(PHOTOS_BASE_DIR, option_chantier_zip)
-                    for f in os.listdir(dossier_cible):
-                        chemin_f = os.path.join(dossier_cible, f)
-                        if os.path.isfile(chemin_f):
-                            zip_file.write(chemin_f, arcname=f"{option_chantier_zip}/{f}")
-                    nom_zip = f"photos_{option_chantier_zip}_{date.today()}.zip"
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            if choix_dossier == "Tous les chantiers (ZIP avec dossiers séparés)":
+                for root, _, files in os.walk(PHOTOS_BASE_DIR):
+                    for file in files:
+                        p_full = os.path.join(root, file)
+                        rel_path = os.path.relpath(p_full, PHOTOS_BASE_DIR)
+                        zip_file.write(p_full, arcname=rel_path)
+                nom_dl = f"chantiers_dossiers_separes_{date.today()}.zip"
+            else:
+                target_dir = os.path.join(PHOTOS_BASE_DIR, choix_dossier)
+                for file in os.listdir(target_dir):
+                    p_full = os.path.join(target_dir, file)
+                    if os.path.isfile(p_full):
+                        zip_file.write(p_full, arcname=f"{choix_dossier}/{file}")
+                nom_dl = f"{choix_dossier}_photos_{date.today()}.zip"
 
-            st.download_button(
-                label="📥 Télécharger ZIP",
-                data=zip_buffer.getvalue(),
-                file_name=nom_zip,
-                mime="application/zip",
-                use_container_width=True
-            )
-
-        if df_all is not None and not df_all.empty:
-            csv_bytes = df_all.to_csv(sep=';', index=False, encoding='utf-8-sig').encode('utf-8-sig')
-            st.download_button(
-                label="📊 Télécharger Registre (Excel/CSV)",
-                data=csv_bytes,
-                file_name="registre_chantier.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
+        st.download_button(
+            label=f"📥 Télécharger {choix_dossier}",
+            data=zip_buffer.getvalue(),
+            file_name=nom_dl,
+            mime="application/zip",
+            use_container_width=True
+        )
 
         st.write("---")
 
-        # --- FILTRE & AFFICHAGE DES CARTES ET PHOTOS ---
+        # Affichage des photos
         if df_all is not None and not df_all.empty and "Chantier" in df_all.columns:
-            chantiers_bruts = [c for c in df_all["Chantier"].dropna().unique() if not str(c).startswith("2026-")]
-            liste_chantiers = ["Tous les chantiers"] + list(chantiers_bruts)
-            filtre_ch = st.selectbox("🔍 Filtrer par projet :", liste_chantiers)
+            liste_projets = ["Tous les chantiers"] + list([c for c in df_all["Chantier"].dropna().unique() if not str(c).startswith("2026-")])
+            f_proj = st.selectbox("🔍 Filtrer les fiches :", liste_projets)
 
-            df_vue = df_all.copy()
-            if filtre_ch != "Tous les chantiers":
-                df_vue = df_vue[df_vue["Chantier"] == filtre_ch]
+            df_show = df_all.copy()
+            if f_proj != "Tous les chantiers":
+                df_show = df_show[df_show["Chantier"] == f_proj]
 
-            st.write(f"Affichage de **{len(df_vue)}** fiche(s) :")
-
-            for _, row in df_vue.iloc[::-1].iterrows():
-                if str(row.get("Chantier", "")).startswith("2026-") or "nan" in str(row.get("Chantier", "")):
+            for _, row in df_show.iloc[::-1].iterrows():
+                if str(row.get("Chantier", "")).startswith("2026-"):
                     continue
 
                 with st.container():
                     st.markdown(f"""
-                        <div style='background-color: #F8FAFC; border-left: 5px solid #0F766E; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-top: 1px solid #E2E8F0; border-right: 1px solid #E2E8F0; border-bottom: 1px solid #E2E8F0;'>
-                            <div style='display: flex; justify-content: space-between; align-items: center;'>
-                                <span style='font-weight: 700; color: #0F172A; font-size: 15px;'>🏢 {row.get("Chantier", "")}</span>
-                                <span style='background-color: #E2E8F0; padding: 2px 8px; border-radius: 12px; font-size: 12px; color: #475569;'>📅 {row.get("Date", "")}</span>
-                            </div>
-                            <div style='margin-top: 6px; font-size: 14px; color: #334155;'>
-                                <b>Travaux :</b> <span style='color: #0F766E;'>{row.get("Corps_d_etat", "")}</span> &nbsp;|&nbsp; 
-                                <b>Rendement :</b> <b>{row.get("Rendement", "")} {row.get("Unite", "")}</b>
-                            </div>
-                            <div style='margin-top: 4px; font-size: 13px; color: #64748B;'>
-                                👷 <i>{row.get("Effectif", "")}</i>
-                            </div>
-                            {"<div style='margin-top: 4px; font-size: 13px; color: #0284C7;'>💬 " + str(row.get("Legende")) + "</div>" if pd.notna(row.get("Legende")) and str(row.get("Legende")).strip() and str(row.get("Legende")) != "nan" else ""}
+                        <div style='background-color: #F8FAFC; border-left: 5px solid #0F766E; padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #E2E8F0;'>
+                            <b>🏢 {row.get("Chantier", "")}</b> &nbsp;|&nbsp; 📅 {row.get("Date", "")}<br>
+                            🛠️ {row.get("Corps_d_etat", "")} &nbsp;|&nbsp; 📏 <b>{row.get("Rendement", "")} {row.get("Unite", "")}</b><br>
+                            👷 {row.get("Effectif", "")}
                         </div>
                     """, unsafe_allow_html=True)
 
-                    photos_raw = str(row.get("Photos", ""))
-                    fichiers = [f.strip() for f in photos_raw.replace(",", "|").replace(";", "|").split("|") if f.strip()]
-                    
-                    chemins_trouves = []
-                    for f in fichiers:
-                        p1 = os.path.join(PHOTOS_BASE_DIR, f)
-                        p2 = os.path.join(PHOTOS_BASE_DIR, os.path.basename(f))
-                        if os.path.exists(p1):
-                            chemins_trouves.append(p1)
-                        elif os.path.exists(p2):
-                            chemins_trouves.append(p2)
+                    raw_photos = str(row.get("Photos", "")).replace(";", "|").replace(",", "|").split("|")
+                    valid_paths = []
+                    for ph in raw_photos:
+                        ph_clean = ph.strip()
+                        # Chercher fi sous-dossier wela direct
+                        p_sub = os.path.join(PHOTOS_BASE_DIR, ph_clean)
+                        p_root = os.path.join(PHOTOS_BASE_DIR, os.path.basename(ph_clean))
+                        if os.path.exists(p_sub):
+                            valid_paths.append(p_sub)
+                        elif os.path.exists(p_root):
+                            valid_paths.append(p_root)
 
-                    if chemins_trouves:
-                        cols = st.columns(len(chemins_trouves) if len(chemins_trouves) <= 3 else 3)
-                        for i, chemin_img in enumerate(chemins_trouves):
+                    if valid_paths:
+                        cols = st.columns(len(valid_paths) if len(valid_paths) <= 3 else 3)
+                        for i, p_img in enumerate(valid_paths):
                             try:
-                                img = Image.open(chemin_img)
-                                cols[i % 3].image(img, use_container_width=True)
+                                cols[i % 3].image(Image.open(p_img), use_container_width=True)
                             except Exception:
                                 pass
-
                     st.write("")
-        else:
-            st.info("Aucune intervention enregistrée pour l'instant.")
 
-        # --- PARAMÈTRES EN BAS ---
-        with st.expander("⚙️ Paramètres (Modifier les chantiers ou les maçons)"):
-            st.markdown("##### 👷 Ouvriers enregistrés")
-            st.caption(", ".join(config["macons"]))
-            c_m1, c_m2 = st.columns([3, 1])
-            with c_m1:
-                n_mac = st.text_input("Nouvel ouvrier", key="add_m")
-            with c_m2:
-                st.write("")
-                st.write("")
-                if st.button("➕ Ajouter"):
-                    if n_mac.strip() and n_mac.strip() not in config["macons"]:
-                        config["macons"].append(n_mac.strip())
-                        sauver_config(config)
-                        st.rerun()
-
-            st.write("---")
-            if st.button("🗑️ Réinitialiser le registre CSV si besoin"):
+        # Nettoyage
+        with st.expander("⚙️ Options avancées"):
+            if st.button("🗑️ Réinitialiser le registre CSV"):
                 if os.path.exists(CSV_FILE):
                     os.remove(CSV_FILE)
-                    st.success("Fichier CSV nettoyé.")
+                    st.success("CSV réinitialisé.")
                     st.rerun()
 
     elif pin != "":
-        st.error("❌ Code secret incorrect.")
+        st.error("❌ Code incorrect.")
+        
