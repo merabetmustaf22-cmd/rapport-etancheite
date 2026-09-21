@@ -317,7 +317,7 @@ with tab_admin:
                     st.rerun()
 
     elif pin != "":
-        st.error("❌ Code secret incorrect.") streamlit as st
+st.error("❌ Code secret incorrect.")
 import pandas as pd
 from datetime import date
 import os
