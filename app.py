@@ -385,6 +385,13 @@ def charger_donnees():
     except Exception:
         return None
 
+def sauvegarder_donnees(df_to_save):
+    try:
+        df_to_save.to_csv(CSV_FILE, sep=';', index=False, encoding='utf-8-sig')
+        return True
+    except Exception:
+        return False
+
 def generer_rapport_excel(df_source):
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
@@ -488,7 +495,7 @@ if "liste_consommations" not in st.session_state:
 tab_saisie, tab_admin = st.tabs(["📲 Saisie Terrain", "📊 Espace Encadrement & Rapports"])
 
 # -------------------------------------------------------------
-# ONGLET 1 : SAISIE TERRAIN (SYNCHRONISÉE EN TEMPS RÉEL)
+# ONGLET 1 : SAISIE TERRAIN
 # -------------------------------------------------------------
 with tab_saisie:
     st.markdown("""
@@ -643,7 +650,7 @@ with tab_saisie:
                 st.error(f"❌ Erreur de transmission : {e}")
 
 # -------------------------------------------------------------
-# ONGLET 2 : ESPACE CADRE, DIRECTION & GESTION DES LISTES
+# ONGLET 2 : ESPACE CADRE, DIRECTION & GESTION (AJOUT + SUPPRESSION)
 # -------------------------------------------------------------
 with tab_admin:
     st.markdown("""
@@ -664,68 +671,106 @@ with tab_admin:
 
     if pin == ADMIN_PIN:
         # =========================================================
-        # ⚙️ SECTION NOUVELLE : AJOUT DYNAMIQUE DE LISTES
+        # ⚙️ GESTION COMPLÈTE DES LISTES : AJOUT ET SUPPRESSION
         # =========================================================
-        with st.expander("⚙️ Configuration des Listes (Chantiers, Tâches, Produits, Équipes)", expanded=False):
-            st.markdown("##### ➕ Ajouter de nouveaux éléments pour la Saisie Terrain")
+        with st.expander("⚙️ Configuration des Listes (Ajouter / Supprimer des options)", expanded=False):
+            st.markdown("##### 🛠️ Gestion des Chantiers, Tâches, Matériaux et Compagnons")
             
-            t_col1, t_col2 = st.columns(2)
-            
-            with t_col1:
-                # 1. Ajouter un chantier
-                st.markdown("**🏢 Nouveau Projet / Chantier :**")
-                nouveau_chantier = st.text_input("Intitulé du chantier", placeholder="Ex : HOPITAL-500-LITS...", key="admin_new_ch")
-                if st.button("➕ Ajouter le chantier", use_container_width=True):
+            # --- 1. CHANTIERS ---
+            st.write("---")
+            st.markdown("**🏢 1. Chantiers / Projets**")
+            c_ch1, c_ch2 = st.columns(2)
+            with c_ch1:
+                nouveau_chantier = st.text_input("Nouveau chantier à ajouter", placeholder="Ex : NOUVEAU-PROJET...", key="add_ch")
+                if st.button("➕ Ajouter ce chantier", use_container_width=True):
                     val = nouveau_chantier.strip()
                     if val and val not in config["chantiers"]:
                         config["chantiers"].append(val)
                         sauvegarder_config(config)
-                        st.success(f"✅ Chantier « {val} » ajouté avec succès !")
+                        st.success(f"Chantier « {val} » ajouté !")
                         st.rerun()
-                    elif val in config["chantiers"]:
-                        st.warning("⚠️ Ce chantier existe déjà dans la liste.")
-
-                st.write("")
-                # 2. Ajouter un matériau
-                st.markdown("**🧪 Nouveau Matériau / Produit :**")
-                nouveau_produit = st.text_input("Désignation du produit", placeholder="Ex : EPOTEK PLUS, SIKA...", key="admin_new_mat")
-                if st.button("➕ Ajouter le produit", use_container_width=True):
-                    val = nouveau_produit.strip()
-                    if val and val not in config["materiaux"]:
-                        config["materiaux"].insert(-1, val)  # Juste avant 'Autre'
+            with c_ch2:
+                del_ch = st.selectbox("Sélectionner un chantier à supprimer", ["-- Sélectionner --"] + config["chantiers"], key="del_ch_box")
+                st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
+                if st.button("🗑️ Supprimer le chantier sélectionné", use_container_width=True):
+                    if del_ch != "-- Sélectionner --":
+                        config["chantiers"].remove(del_ch)
                         sauvegarder_config(config)
-                        st.success(f"✅ Produit « {val} » ajouté avec succès !")
+                        st.success(f"Chantier « {del_ch} » retiré de la liste !")
                         st.rerun()
-                    elif val in config["materiaux"]:
-                        st.warning("⚠️ Ce matériau existe déjà dans la liste.")
+                st.markdown('</div>', unsafe_allow_html=True)
 
-            with t_col2:
-                # 3. Ajouter un corps d'état
-                st.markdown("**🛠️ Nouveau Corps d'État / Tâche :**")
-                nouvelle_tache = st.text_input("Intitulé de l'ouvrage", placeholder="Ex : ISOLATION THERMIQUE...", key="admin_new_tache")
-                if st.button("➕ Ajouter la tâche", use_container_width=True):
+            # --- 2. CORPS D'ÉTAT ---
+            st.write("---")
+            st.markdown("**🛠️ 2. Corps d'État / Tâches**")
+            c_t1, c_t2 = st.columns(2)
+            with c_t1:
+                nouvelle_tache = st.text_input("Nouvelle tâche à ajouter", placeholder="Ex : ÉTANCHÉITÉ CUVELAGE...", key="add_tache")
+                if st.button("➕ Ajouter cette tâche", use_container_width=True):
                     val = nouvelle_tache.strip()
                     if val and val not in config["taches"]:
                         config["taches"].append(val)
                         sauvegarder_config(config)
-                        st.success(f"✅ Corps d'état « {val} » ajouté avec succès !")
+                        st.success(f"Tâche « {val} » ajoutée !")
                         st.rerun()
-                    elif val in config["taches"]:
-                        st.warning("⚠️ Cette tâche existe déjà dans la liste.")
+            with c_t2:
+                del_tache = st.selectbox("Sélectionner une tâche à supprimer", ["-- Sélectionner --"] + config["taches"], key="del_tache_box")
+                st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
+                if st.button("🗑️ Supprimer la tâche sélectionnée", use_container_width=True):
+                    if del_tache != "-- Sélectionner --":
+                        config["taches"].remove(del_tache)
+                        sauvegarder_config(config)
+                        st.success(f"Tâche « {del_tache} » retirée de la liste !")
+                        st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
-                st.write("")
-                # 4. Ajouter un compagnon
-                st.markdown("**👷 Nouveau Compagnon / Ouvrier :**")
-                nouveau_macon = st.text_input("Nom & Prénom de l'ouvrier", placeholder="Ex : BENALI Karim...", key="admin_new_macon")
-                if st.button("➕ Ajouter l'ouvrier", use_container_width=True):
+            # --- 3. MATÉRIAUX ---
+            st.write("---")
+            st.markdown("**🧪 3. Matériaux & Produits Consommés**")
+            c_m1, c_m2 = st.columns(2)
+            with c_m1:
+                nouveau_mat = st.text_input("Nouveau matériau à ajouter", placeholder="Ex : RESINE POLYURETHANE...", key="add_mat")
+                if st.button("➕ Ajouter ce produit", use_container_width=True):
+                    val = nouveau_mat.strip()
+                    if val and val not in config["materiaux"]:
+                        config["materiaux"].insert(-1, val)
+                        sauvegarder_config(config)
+                        st.success(f"Produit « {val} » ajouté !")
+                        st.rerun()
+            with c_m2:
+                del_mat = st.selectbox("Sélectionner un produit à supprimer", ["-- Sélectionner --"] + config["materiaux"], key="del_mat_box")
+                st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
+                if st.button("🗑️ Supprimer le produit sélectionné", use_container_width=True):
+                    if del_mat != "-- Sélectionner --":
+                        config["materiaux"].remove(del_mat)
+                        sauvegarder_config(config)
+                        st.success(f"Produit « {del_mat} » retiré de la liste !")
+                        st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            # --- 4. COMPAGNONS / OUVRIERS ---
+            st.write("---")
+            st.markdown("**👷 4. Compagnons / Équipe**")
+            c_o1, c_o2 = st.columns(2)
+            with c_o1:
+                nouveau_macon = st.text_input("Nouvel ouvrier à ajouter", placeholder="Ex : NOM & Prénom...", key="add_macon")
+                if st.button("➕ Ajouter cet ouvrier", use_container_width=True):
                     val = nouveau_macon.strip()
                     if val and val not in config["macons"]:
                         config["macons"].append(val)
                         sauvegarder_config(config)
-                        st.success(f"✅ Ouvrier « {val} » ajouté avec succès !")
+                        st.success(f"Compagnon « {val} » ajouté !")
                         st.rerun()
-                    elif val in config["macons"]:
-                        st.warning("⚠️ Cet ouvrier existe déjà dans la liste.")
+            with c_o2:
+                del_macon = st.selectbox("Sélectionner un ouvrier à supprimer", ["-- Sélectionner --"] + config["macons"], key="del_macon_box")
+                st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
+                if st.button("🗑️ Supprimer l'ouvrier sélectionné", use_container_width=True):
+                    if del_macon != "-- Sélectionner --":
+                        config["macons"].remove(del_macon)
+                        sauvegarder_config(config)
+                        st.success(f"Compagnon « {del_macon} » retiré de la liste !")
+                        st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
         st.write("---")
 
@@ -802,6 +847,9 @@ with tab_admin:
                         st.download_button(label=f"Télécharger ZIP", data=zip_buf.getvalue(), file_name=f"Photos_{d_ch}.zip", mime="application/zip", key=f"z_{d_ch}", use_container_width=True)
 
         st.write("---")
+        # =========================================================
+        # 🔍 REGISTRE DES FICHES AVEC BOUTON DE SUPPRESSION D'UNE LIGNE
+        # =========================================================
         if df_all is not None and not df_all.empty and "Chantier" in df_all.columns:
             st.markdown("### 🔍 Registre d'Attachement & Suivi des Ouvrages")
             chantiers_bruts = [c for c in df_all["Chantier"].dropna().unique() if not str(c).startswith("2026-") and str(c).strip()]
@@ -811,7 +859,7 @@ with tab_admin:
             if f_proj != "Tous les projets":
                 df_show = df_show[df_show["Chantier"] == f_proj]
 
-            for _, row in df_show.iloc[::-1].iterrows():
+            for orig_idx, row in df_show.iloc[::-1].iterrows():
                 if str(row.get("Chantier", "")).startswith("2026-") or not str(row.get("Chantier", "")).strip():
                     continue
 
@@ -865,10 +913,19 @@ with tab_admin:
                             cols[i % 4].image(Image.open(p_img), use_container_width=True)
                         except Exception:
                             pass
+
+                # BOUTON DE SUPPRESSION DE CETTE FICHE PRÉCISE
+                st.markdown('<div class="btn-supprimer" style="margin-top: 6px;">', unsafe_allow_html=True)
+                if st.button(f"🗑️ Supprimer cette fiche ({row.get('Chantier','')} - {row.get('Date','')})", key=f"del_row_{orig_idx}"):
+                    df_all = df_all.drop(orig_idx).reset_index(drop=True)
+                    sauvegarder_donnees(df_all)
+                    st.success("Fiche supprimée avec succès !")
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
                 st.write("")
 
         with st.expander("⚙️ Maintenance du système"):
-            if st.button("🗑️ Réinitialiser le registre CSV"):
+            if st.button("🗑️ Réinitialiser tout le registre CSV"):
                 if os.path.exists(CSV_FILE):
                     os.remove(CSV_FILE)
                     st.rerun()
