@@ -46,13 +46,9 @@ def charger_config():
         try:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except:
+        except Exception:
             return CONFIG_DEFAUT
     return CONFIG_DEFAUT
-
-def sauver_config(cfg):
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, ensure_ascii=False, indent=2)
 
 def charger_donnees():
     if not os.path.exists(CSV_FILE):
@@ -61,7 +57,6 @@ def charger_donnees():
         df = pd.read_csv(CSV_FILE, sep=';', encoding='utf-8-sig', on_bad_lines='skip')
         return df
     except Exception:
-        # En cas d'erreur de format ancien, on tente une lecture standard ou on ignore les mauvaises lignes
         try:
             df = pd.read_csv(CSV_FILE, encoding='utf-8-sig', on_bad_lines='skip')
             return df
@@ -79,7 +74,7 @@ with tab_saisie:
     st.markdown("""
         <div style='background-color: #0F766E; padding: 14px; border-radius: 12px; text-align: center; margin-bottom: 15px;'>
             <h2 style='color: white; margin: 0; font-size: 22px;'>📱 Pointage & Photos Chantier</h2>
-            <p style='color: #CCFBF1; margin: 5px 0 0 0; font-size: 13px;'>Remplissez les champs et envoyez vos photos</p>
+            <p style='color: #CCFBF1; margin: 5px 0 0 0; font-size: 13px;'>Remplissez les champs et ajoutez vos photos</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -110,12 +105,10 @@ with tab_saisie:
             unite = st.selectbox("Unité", ["m²", "ML", "U"])
 
         st.write("---")
-        st.markdown("### 📸 Photos du travail")
+        st.markdown("### 📸 Photos du chantier")
         
-        photo_camera = st.camera_input("📷 Prendre une photo en direct avec la caméra")
-
         photos_galerie = st.file_uploader(
-            "📂 Ou importer des photos depuis la galerie",
+            "Prendre une photo avec l'appareil ou choisir dans la galerie (Multi-photos)",
             type=["jpg", "jpeg", "png"],
             accept_multiple_files=True
         )
@@ -126,14 +119,8 @@ with tab_saisie:
         submitted = st.form_submit_button("🚀 ENVOYER LE RAPPORT DU JOUR", use_container_width=True)
 
         if submitted:
-            toutes_photos = []
-            if photo_camera:
-                toutes_photos.append(photo_camera)
-            if photos_galerie:
-                toutes_photos.extend(photos_galerie)
-
-            if not toutes_photos:
-                st.error("⚠️ Veuillez ajouter au moins une photo (caméra ou galerie).")
+            if not photos_galerie:
+                st.error("⚠️ Veuillez ajouter au moins une photo.")
             elif not macons_presents:
                 st.error("⚠️ Veuillez sélectionner au moins un ouvrier présent.")
             else:
@@ -141,7 +128,7 @@ with tab_saisie:
                 chantier_clean = chantier_sel.split('(')[0].replace(" ", "_")
                 tache_clean = tache_sel.replace(" ", "_")[:12]
 
-                for idx, p in enumerate(toutes_photos):
+                for idx, p in enumerate(photos_galerie):
                     extension = ".jpg"
                     if hasattr(p, "name") and os.path.splitext(p.name)[1]:
                         extension = os.path.splitext(p.name)[1].lower()
@@ -238,7 +225,6 @@ with tab_admin:
         else:
             st.info("Aucune saisie pour le moment.")
 
-        # Option pour effacer l'ancien fichier s'il est corrompu
         st.write("---")
         if st.button("🗑️ Réinitialiser le fichier CSV corrompu", help="Cliquez ici si le tableau affiche une erreur de lecture"):
             if os.path.exists(CSV_FILE):
