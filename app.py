@@ -183,16 +183,11 @@ with tab_admin:
         df_all = charger_donnees()
         total_photos = len(os.listdir(PHOTOS_DIR)) if os.path.exists(PHOTOS_DIR) else 0
 
-        # --- CARTES INDICATEURS ---
-        kpi1, kpi2, kpi3 = st.columns(3)
+        # --- CARTES INDICATEURS (PHOTOS & RAPPORTS SEULEMENT) ---
+        kpi1, kpi2 = st.columns(2)
         with kpi1:
-            total_m2 = 0.0
-            if df_all is not None and "Rendement" in df_all.columns and "Unite" in df_all.columns:
-                total_m2 = pd.to_numeric(df_all[df_all["Unite"].str.contains("m²", na=False)]["Rendement"], errors='coerce').sum()
-            st.metric("Total Réalisé", f"{total_m2:.1f} m²")
-        with kpi2:
             st.metric("Photos Reçues", f"{total_photos} 📸")
-        with kpi3:
+        with kpi2:
             total_rapports = len(df_all) if df_all is not None else 0
             st.metric("Rapports", f"{total_rapports}")
 
@@ -248,7 +243,6 @@ with tab_admin:
             st.write(f"Affichage de **{len(df_vue)}** fiche(s) :")
 
             for _, row in df_vue.iloc[::-1].iterrows():
-                # Ignorer les lignes mal formées
                 if str(row.get("Chantier", "")).startswith("2026-") or "nan" in str(row.get("Chantier", "")):
                     continue
 
