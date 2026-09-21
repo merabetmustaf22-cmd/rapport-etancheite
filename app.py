@@ -7,6 +7,9 @@ import io
 import zipfile
 import re
 from PIL import Image
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
 
 st.set_page_config(page_title="Chantier & Suivi", page_icon="📱", layout="centered")
 
@@ -88,6 +91,113 @@ def charger_donnees():
     except Exception:
         return None
 
+# --- GÉNÉRATEUR EXCEL PROFESSIONNEL MULTI-FEUILLES ---
+def generer_rapport_excel(df_source):
+    wb = openpyxl.Workbook()
+    wb.remove(wb.active)  # Supprimer la feuille par défaut
+
+    # Styles visuels
+    header_fill = PatternFill(start_color="0F766E", end_color="0F766E", fill_type="solid")
+    sub_fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
+    header_font = Font(name="Arial", size=11, bold=True, color="FFFFFF")
+    data_font = Font(name="Arial", size=10)
+    total_font = Font(name="Arial", size=10, bold=True)
+    border_thin = Border(
+        left=Side(style='thin', color='CBD5E1'),
+        right=Side(style='thin', color='CBD5E1'),
+        top=Side(style='thin', color='CBD5E1'),
+        bottom=Side(style='thin', color='CBD5E1')
+    )
+
+    def styliser_feuille(ws, titre_entete):
+        for col in range(1, len(titre_entete) + 1):
+            cell = ws.cell(row=1, column=col)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+        for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=len(titre_entete)):
+            for cell in row:
+                cell.font = data_font
+                cell.border = border_thin
+                if isinstance(cell.value, (int, float)):
+                    cell.alignment = Alignment(horizontal="right", vertical="center")
+                else:
+                    cell.alignment = Alignment(horizontal="left", vertical="center")
+
+        ws.row_dimensions[1].height = 26
+        for col in ws.columns:
+            max_len = max(len(str(cell.value or '')) for cell in col)
+            col_letter = get_column_letter(col[0].column)
+            ws.column_dimensions[col_letter].width = max(max_len + 4, 12)
+
+    # 1. FEUILLE : SYNTHÈSE CHANTIERS
+    ws1 = wb.create_sheet(title="Synthèse Chantiers")
+    headers1 = ["Chantier", "Surface Réalisée (m²)", "Linéaire Réalisé (ML)", "Unités (U)", "Nombre d'Interventions"]
+    ws1.append(headers1)
+
+    chantiers_uniques = [c for c in df_source["Chantier"].dropna().unique() if not str(c).startswith("2026-")]
+    for ch in sorted(chantiers_uniques):
+        sub = df_source[df_source["Chantier"] == ch]
+        sub["Rendement_num"] = pd.to_numeric(sub["Rendement"], errors='coerce').fillna(0)
+        m2 = sub[sub["Unite"].str.contains("m²", na=False)]["Rendement_num"].sum()
+        ml = sub[sub["Unite"].str.contains("ML", na=False)]["Rendement_num"].sum()
+        u = sub[sub["Unite"].str.contains("U", na=False)]["Rendement_num"].sum()
+        ws1.append([ch, round(m2, 2), round(ml, 2), round(u, 2), len(sub)])
+
+    styliser_feuille(ws1, headers1)
+
+    # 2. FEUILLE : CONSOMMATION MATÉRIAUX
+    ws2 = wb.create_sheet(title="Consommation Matériaux")
+    headers2 = ["Date", "Chantier", "Corps d'État", "Matériaux Consommés", "Remarques"]
+    ws2.append(headers2)
+
+    for _, r in df_source.iterrows():
+        c_mat = r.get("Consommation", "")
+        if pd.isna(c_mat) or not str(c_mat).strip() or str(c_mat) == "nan":
+            c_mat = r.get("Materiau", "Non renseigné")
+        ws2.append([r.get("Date", ""), r.get("Chantier", ""), r.get("Corps_d_etat", ""), str(c_mat), r.get("Legende", "")])
+
+    styliser_feuille(ws2, headers2)
+
+    # 3. FEUILLE : SUIVI EFFECTIF
+    ws3 = wb.create_sheet(title="Pointage Ouvriers")
+    headers3 = ["Date", "Chantier", "Corps d'État", "Effectif Présent", "Nombre d'Ouvriers"]
+    ws3.append(headers3)
+
+    for _, r in df_source.iterrows():
+        ws3.append([r.get("Date", ""), r.get("Chantier", ""), r.get("Corps_d_etat", ""), r.get("Effectif", ""), r.get("Nb_Ouvriers", "")])
+
+    styliser_feuille(ws3, headers3)
+
+    # 4. FEUILLE : JOURNAL DÉTAILLÉ COMPLET
+    ws4 = wb.create_sheet(title="Journal Détaillé")
+    headers4 = ["Date", "Chantier", "Corps d'État", "Phase", "Rendement", "Unité", "Consommation", "Effectif", "Observation"]
+    ws4.append(headers4)
+
+    for _, r in df_source.iterrows():
+        c_mat = r.get("Consommation", "")
+        if pd.isna(c_mat) or not str(c_mat).strip() or str(c_mat) == "nan":
+            c_mat = r.get("Materiau", "-")
+        
+        ws4.append([
+            r.get("Date", ""),
+            r.get("Chantier", ""),
+            r.get("Corps_d_etat", ""),
+            r.get("Phase", ""),
+            pd.to_numeric(r.get("Rendement", 0), errors='coerce') or 0,
+            r.get("Unite", ""),
+            str(c_mat),
+            r.get("Effectif", ""),
+            r.get("Legende", "")
+        ])
+
+    styliser_feuille(ws4, headers4)
+
+    out = io.BytesIO()
+    wb.save(out)
+    return out.getvalue()
+
 config = charger_config()
 
 tab_saisie, tab_admin = st.tabs(["📲 Saisie Chantier", "📊 Tableau de Bord"])
@@ -128,11 +238,8 @@ with tab_saisie:
     with c_r2:
         unite = st.selectbox("Unité", ["m²", "ML", "U"])
 
-    # --- SECTION CONSOMMATION MULTI-PRODUITS DYNAMIQUE ---
     st.write("---")
     st.markdown("### 🧪 Consommation des Matériaux")
-    st.caption("Sélectionnez un ou plusieurs produits utilisés aujourd'hui :")
-
     produits_choisis = st.multiselect(
         "📦 Produits consommés",
         config["materiaux"],
@@ -224,17 +331,17 @@ with tab_saisie:
             else:
                 df_entry.to_csv(CSV_FILE, sep=';', index=False, encoding='utf-8-sig')
 
-            st.success(f"✅ Rapport enregistré avec succès ! Photos dans : 📁 {dossier_chantier} / 📅 {dossier_date}")
+            st.success(f"✅ Rapport enregistré ! Photos dans : 📁 {dossier_chantier} / 📅 {dossier_date}")
             st.rerun()
 
 # -------------------------------------------------------------
-# ONGLET 2 : TABLEAU DE BORD RESPONSABLE
+# ONGLET 2 : TABLEAU DE BORD (RAPPORT EXCEL DÉTAILLÉ & ZIP)
 # -------------------------------------------------------------
 with tab_admin:
     st.markdown("""
         <div style='background-color: #1E293B; padding: 14px; border-radius: 12px; text-align: center; margin-bottom: 15px;'>
             <h2 style='color: white; margin: 0; font-size: 20px;'>📊 Tableau de Bord Chantier</h2>
-            <p style='color: #94A3B8; margin: 4px 0 0 0; font-size: 13px;'>Suivi des rendements, consommations et photos</p>
+            <p style='color: #94A3B8; margin: 4px 0 0 0; font-size: 13px;'>Suivi visuel, téléchargements photos et rapport Excel</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -252,15 +359,29 @@ with tab_admin:
             st.metric("Photos Reçues", f"{total_photos} 📸")
         with kpi2:
             total_rapports = len(df_all) if df_all is not None else 0
-            st.metric("Rapports", f"{total_rapports}")
+            st.metric("Rapports Validés", f"{total_rapports}")
+
+        st.write("---")
+        st.markdown("### 📊 Rapport Excel Détaillé (.xlsx)")
+        st.caption("Génère un classeur complet à 4 feuilles (Synthèse chantiers, consommations, effectifs et journal).")
+
+        if df_all is not None and not df_all.empty:
+            excel_bytes = generer_rapport_excel(df_all)
+            st.download_button(
+                label="📥 TÉLÉCHARGER LE RAPPORT EXCEL FORMATÉ (.xlsx)",
+                data=excel_bytes,
+                file_name=f"Rapport_Mensuel_Chantiers_{date.today()}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
+        else:
+            st.button("📥 Rapport Excel (En attente de saisies)", disabled=True, use_container_width=True)
 
         st.write("---")
         st.markdown("### 📦 Télécharger les Photos")
         dossiers_chantiers = [d for d in os.listdir(PHOTOS_BASE_DIR) if os.path.isdir(os.path.join(PHOTOS_BASE_DIR, d))]
 
-        if not dossiers_chantiers:
-            st.info("Aucun dossier photo enregistré pour le moment.")
-        else:
+        if dossiers_chantiers:
             for d_ch in sorted(dossiers_chantiers):
                 dir_ch = os.path.join(PHOTOS_BASE_DIR, d_ch)
                 fichiers_total = []
@@ -278,7 +399,7 @@ with tab_admin:
 
                     c_info, c_btn = st.columns([2, 1])
                     with c_info:
-                        st.markdown(f"📁 **{d_ch}** ({len(fichiers_total)} photos par date)")
+                        st.markdown(f"📁 **{d_ch}** ({len(fichiers_total)} photos classées par date)")
                     with c_btn:
                         st.download_button(
                             label=f"⬇️ Télécharger ZIP",
@@ -290,19 +411,8 @@ with tab_admin:
                         )
 
         st.write("---")
-        if df_all is not None and not df_all.empty:
-            csv_bytes = df_all.to_csv(sep=';', index=False, encoding='utf-8-sig').encode('utf-8-sig')
-            st.download_button(
-                label="📊 Télécharger Tout le Registre (Excel/CSV)",
-                data=csv_bytes,
-                file_name="registre_chantier.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
 
-        st.write("---")
-
-        # Cartes détaillées avec Rendement & Multi-Consommation
+        # Cartes visuelles de suivi
         if df_all is not None and not df_all.empty and "Chantier" in df_all.columns:
             liste_projets = ["Tous les chantiers"] + list([c for c in df_all["Chantier"].dropna().unique() if not str(c).startswith("2026-")])
             f_proj = st.selectbox("🔍 Filtrer les fiches :", liste_projets)
@@ -317,7 +427,7 @@ with tab_admin:
 
                 conso_val = row.get("Consommation", "")
                 if pd.isna(conso_val) or not str(conso_val).strip() or str(conso_val) == "nan":
-                    conso_val = row.get("Materiau", "Aucun")
+                    conso_val = row.get("Materiau", "Non renseigné")
 
                 with st.container():
                     st.markdown(f"""
@@ -330,7 +440,7 @@ with tab_admin:
                                 🛠️ {row.get("Corps_d_etat", "")} &nbsp;|&nbsp; 📏 <b>{row.get("Rendement", "")} {row.get("Unite", "")}</b>
                             </div>
                             <div style='margin-top: 4px; font-size: 13px; color: #0369A1;'>
-                                🧪 <b>Matériaux consommés :</b> {conso_val}
+                                🧪 <b>Matériaux :</b> {conso_val}
                             </div>
                             <div style='color: #64748B; font-size: 13px; margin-top: 3px;'>
                                 👷 {row.get("Effectif", "")}
