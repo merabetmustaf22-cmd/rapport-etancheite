@@ -18,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS COMPLET HAUTE VISIBILITÉ ---
+# --- CSS MOBILE FIRST & HAUTE VISIBILITÉ ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -32,16 +32,55 @@ st.markdown("""
         background-color: #0B1120 !important;
     }
 
-    /* TOUS LES TITRES EN BLANC PUR */
+    /* TITRES GÉNÉRAUX SANS COUPURE */
     h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5 {
         color: #FFFFFF !important;
         font-weight: 800 !important;
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+        hyphens: none !important;
+    }
+
+    /* EN-TÊTE CALIBRÉ POUR SMARTPHONE (ZÉRO MOT COUPÉ) */
+    .header-cadre {
+        background-color: #0F172A;
+        border-radius: 14px;
+        padding: 16px 14px;
+        box-shadow: 0 10px 24px -5px rgba(0, 0, 0, 0.6);
+        margin-bottom: 18px;
+        border: 1px solid #334155;
+    }
+    .header-title {
+        font-size: 19px !important;
+        line-height: 1.3 !important;
+        font-weight: 900 !important;
+        margin: 0 !important;
+        color: #FFFFFF !important;
+        word-break: normal !important;
+        hyphens: none !important;
+    }
+    .header-sub {
+        font-size: 12px !important;
+        color: #38BDF8 !important;
+        margin-top: 5px !important;
+        font-weight: 600 !important;
+        line-height: 1.3 !important;
+    }
+    .badge-pro {
+        background: rgba(13, 148, 136, 0.3);
+        border: 1px solid #14B8A6;
+        color: #5EEAD4 !important;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 800;
+        white-space: nowrap !important;
     }
 
     /* LABELS DES CHAMPS */
     .stWidgetLabel p, [data-testid="stWidgetLabel"] p, label p {
         color: #FFFFFF !important;
-        font-size: 15px !important;
+        font-size: 14px !important;
         font-weight: 700 !important;
     }
 
@@ -119,12 +158,12 @@ st.markdown("""
     /* CHIFFRES STATISTIQUES / KPI */
     [data-testid="stMetricValue"] {
         color: #FFFFFF !important;
-        font-size: 36px !important;
+        font-size: 32px !important;
         font-weight: 900 !important;
     }
     [data-testid="stMetricLabel"] p {
         color: #38BDF8 !important;
-        font-size: 16px !important;
+        font-size: 14px !important;
         font-weight: 800 !important;
     }
 
@@ -136,7 +175,7 @@ st.markdown("""
         font-weight: 800 !important;
         border-radius: 10px !important;
         border: none !important;
-        padding: 12px 18px !important;
+        padding: 12px 16px !important;
         box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3) !important;
     }
     div.stButton > button * {
@@ -155,7 +194,7 @@ st.markdown("""
     .btn-valider button {
         background: linear-gradient(135deg, #059669 0%, #10B981 100%) !important;
         color: #FFFFFF !important;
-        font-size: 18px !important;
+        font-size: 16px !important;
         font-weight: 800 !important;
         border-radius: 12px !important;
         border: none !important;
@@ -168,11 +207,11 @@ st.markdown("""
     div.stDownloadButton > button {
         background-color: #FFFFFF !important;
         color: #0F172A !important;
-        font-size: 15px !important;
+        font-size: 14px !important;
         font-weight: 800 !important;
         border-radius: 10px !important;
         border: 2px solid #CBD5E1 !important;
-        padding: 12px 20px !important;
+        padding: 10px 16px !important;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
     }
     div.stDownloadButton > button * {
@@ -180,57 +219,26 @@ st.markdown("""
         font-weight: 800 !important;
     }
 
-    /* EN-TÊTE */
-    .header-cadre {
-        background-color: #0F172A;
-        border-radius: 16px;
-        padding: 24px;
-        box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.6);
-        margin-bottom: 22px;
-        border: 1px solid #334155;
-    }
-    .header-title {
-        font-size: 26px;
-        font-weight: 900;
-        margin: 0;
-        color: #FFFFFF !important;
-    }
-    .header-sub {
-        font-size: 14px;
-        color: #38BDF8 !important;
-        margin-top: 6px;
-        font-weight: 600;
-    }
-    .badge-pro {
-        background: rgba(13, 148, 136, 0.3);
-        border: 1px solid #14B8A6;
-        color: #5EEAD4 !important;
-        padding: 6px 14px;
-        border-radius: 8px;
-        font-size: 13px;
-        font-weight: 800;
-    }
-
     /* CARTES DES INTERVENTIONS */
     .card-intervention {
         background-color: #111827;
         border-radius: 14px;
         border: 1px solid #334155;
-        padding: 18px;
-        margin-bottom: 18px;
-        border-left: 6px solid #10B981;
+        padding: 16px;
+        margin-bottom: 16px;
+        border-left: 5px solid #10B981;
     }
     .tag-projet {
-        font-size: 17px;
+        font-size: 15px;
         font-weight: 900;
         color: #FFFFFF !important;
     }
     .tag-date {
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 700;
         color: #FFFFFF !important;
         background: #1E293B;
-        padding: 4px 10px;
+        padding: 3px 8px;
         border-radius: 6px;
         border: 1px solid #475569;
     }
@@ -239,9 +247,9 @@ st.markdown("""
         background-color: #1E293B;
         color: #FFFFFF !important;
         border: 1px solid #475569;
-        padding: 5px 12px;
+        padding: 4px 10px;
         border-radius: 6px;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 800;
     }
     .tag-rendement {
@@ -249,9 +257,9 @@ st.markdown("""
         background-color: #064E3B;
         color: #6EE7B7 !important;
         border: 1px solid #059669;
-        padding: 5px 12px;
+        padding: 4px 10px;
         border-radius: 6px;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 900;
         margin-left: 6px;
     }
@@ -260,24 +268,26 @@ st.markdown("""
         background-color: #082F49;
         color: #7DD3FC !important;
         border: 1px solid #0284C7;
-        padding: 5px 10px;
+        padding: 4px 8px;
         border-radius: 6px;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 800;
         margin: 3px 4px 3px 0;
     }
 
     /* ONGLETS */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 12px;
+        gap: 6px;
     }
     .stTabs [data-baseweb="tab"] {
-        height: 48px;
+        height: 44px;
         background-color: #1E293B;
-        border-radius: 10px 10px 0px 0px;
+        border-radius: 8px 8px 0px 0px;
         color: #FFFFFF !important;
         font-weight: 800;
+        font-size: 13px;
         border: 1px solid #334155;
+        padding: 6px 12px;
     }
     .stTabs [aria-selected="true"] {
         background-color: #0F172A !important;
@@ -286,7 +296,7 @@ st.markdown("""
     }
     hr {
         border-color: #334155 !important;
-        margin: 24px 0 !important;
+        margin: 18px 0 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -495,18 +505,19 @@ if "liste_consommations" not in st.session_state:
 tab_saisie, tab_admin = st.tabs(["📲 Saisie Terrain", "📊 Espace Encadrement & Rapports"])
 
 # -------------------------------------------------------------
-# ONGLET 1 : SAISIE TERRAIN
+# ONGLET 1 : SAISIE TERRAIN (CALIBRÉE SMARTPHONE)
 # -------------------------------------------------------------
 with tab_saisie:
+    # EN-TÊTE SANS AUCUNE COUPURE DE MOTS
     st.markdown("""
         <div class='header-cadre'>
-            <div style='display: flex; justify-content: space-between; align-items: flex-start;'>
+            <div style='display: flex; justify-content: space-between; align-items: center;'>
                 <div>
                     <h1 class='header-title'>Rapport Journalier d'Exécution</h1>
                     <div class='header-sub'>Étanchéité technique & Traitement des supports</div>
                 </div>
-                <div class='badge-pro'>
-                    PRO-V1.0
+                <div>
+                    <span class='badge-pro'>PRO V1.0</span>
                 </div>
             </div>
         </div>
@@ -650,18 +661,18 @@ with tab_saisie:
                 st.error(f"❌ Erreur de transmission : {e}")
 
 # -------------------------------------------------------------
-# ONGLET 2 : ESPACE CADRE, DIRECTION & GESTION (AJOUT + SUPPRESSION)
+# ONGLET 2 : ESPACE CADRE, DIRECTION & GESTION
 # -------------------------------------------------------------
 with tab_admin:
     st.markdown("""
         <div class='header-cadre'>
-            <div style='display: flex; justify-content: space-between; align-items: flex-start;'>
+            <div style='display: flex; justify-content: space-between; align-items: center;'>
                 <div>
                     <h1 class='header-title'>Tableau de Bord & Attachements</h1>
                     <div class='header-sub'>Supervision technique, synthèse des consommations et exports</div>
                 </div>
-                <div class='badge-pro'>
-                    SUPERVISION
+                <div>
+                    <span class='badge-pro'>SUPERVISION</span>
                 </div>
             </div>
         </div>
@@ -670,9 +681,6 @@ with tab_admin:
     pin = st.text_input("Authentification Responsable (Code PIN) :", type="password", placeholder="Saisir le code d'accès...")
 
     if pin == ADMIN_PIN:
-        # =========================================================
-        # ⚙️ GESTION COMPLÈTE DES LISTES : AJOUT ET SUPPRESSION
-        # =========================================================
         with st.expander("⚙️ Configuration des Listes (Ajouter / Supprimer des options)", expanded=False):
             st.markdown("##### 🛠️ Gestion des Chantiers, Tâches, Matériaux et Compagnons")
             
@@ -847,9 +855,6 @@ with tab_admin:
                         st.download_button(label=f"Télécharger ZIP", data=zip_buf.getvalue(), file_name=f"Photos_{d_ch}.zip", mime="application/zip", key=f"z_{d_ch}", use_container_width=True)
 
         st.write("---")
-        # =========================================================
-        # 🔍 REGISTRE DES FICHES AVEC BOUTON DE SUPPRESSION D'UNE LIGNE
-        # =========================================================
         if df_all is not None and not df_all.empty and "Chantier" in df_all.columns:
             st.markdown("### 🔍 Registre d'Attachement & Suivi des Ouvrages")
             chantiers_bruts = [c for c in df_all["Chantier"].dropna().unique() if not str(c).startswith("2026-") and str(c).strip()]
@@ -914,7 +919,6 @@ with tab_admin:
                         except Exception:
                             pass
 
-                # BOUTON DE SUPPRESSION DE CETTE FICHE PRÉCISE
                 st.markdown('<div class="btn-supprimer" style="margin-top: 6px;">', unsafe_allow_html=True)
                 if st.button(f"🗑️ Supprimer cette fiche ({row.get('Chantier','')} - {row.get('Date','')})", key=f"del_row_{orig_idx}"):
                     df_all = df_all.drop(orig_idx).reset_index(drop=True)
