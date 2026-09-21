@@ -57,12 +57,15 @@ def charger_donnees():
     if not os.path.exists(CSV_FILE):
         return None
     try:
-        return pd.read_csv(CSV_FILE, sep=';', encoding='utf-8-sig', on_bad_lines='skip')
-    except Exception:
-        try:
-            return pd.read_csv(CSV_FILE, encoding='utf-8-sig', on_bad_lines='skip')
-        except Exception:
+        # Détection automatique du séparateur (; ou ,)
+        df = pd.read_csv(CSV_FILE, sep=None, engine='python', encoding='utf-8-sig', on_bad_lines='skip')
+        if "Chantier" not in df.columns:
+            # Réinitialisation si l'en-tête est corrompu
+            os.remove(CSV_FILE)
             return None
+        return df
+    except Exception:
+        return None
 
 config = charger_config()
 
@@ -164,7 +167,7 @@ with tab_saisie:
                 st.success(f"✅ {len(noms_sauvegardes)} photo(s) et métré enregistrés avec succès !")
 
 # -------------------------------------------------------------
-# ONGLET 2 : NOUVEAU TABLEAU DE BORD RESPONSABLE (DESIGN MODERNE)
+# ONGLET 2 : TABLEAU DE BORD RESPONSABLE
 # -------------------------------------------------------------
 with tab_admin:
     st.markdown("""
@@ -183,7 +186,9 @@ with tab_admin:
         # --- CARTES INDICATEURS (KPIs) ---
         kpi1, kpi2, kpi3 = st.columns(3)
         with kpi1:
-            total_m2 = df_all[df_all["Unite"] == "m²"]["Rendement"].sum() if df_all is not None and "Rendement" in df_all.columns else 0.0
+            total_m2 = 0.0
+            if df_all is not None and "Rendement" in df_all.columns and "Unite" in df_all.columns:
+                total_m2 = pd.to_numeric(df_all[df_all["Unite"] == "m²"]["Rendement"], errors='coerce').sum()
             st.metric("Total Réalisé", f"{total_m2:.1f} m²")
         with kpi2:
             st.metric("Photos Reçues", f"{total_photos} 📸")
@@ -230,8 +235,8 @@ with tab_admin:
 
         st.write("---")
 
-        # --- FILTRE DE RECHERCHE ---
-        if df_all is not None and not df_all.empty:
+        # --- FILTRE & CARTES DES FICHES ---
+        if df_all is not None and not df_all.empty and "Chantier" in df_all.columns:
             liste_chantiers = ["Tous les chantiers"] + list(df_all["Chantier"].dropna().unique())
             filtre_ch = st.selectbox("🔍 Filtrer par projet :", liste_chantiers)
 
@@ -241,7 +246,6 @@ with tab_admin:
 
             st.write(f"Affichage de **{len(df_vue)}** fiche(s) :")
 
-            # --- FLUX DES FICHES CHANTIER EN CARTES ÉLÉGANTES ---
             for _, row in df_vue.iloc[::-1].iterrows():
                 with st.container():
                     st.markdown(f"""
@@ -261,7 +265,6 @@ with tab_admin:
                         </div>
                     """, unsafe_allow_html=True)
 
-                    # Affichage des photos de la fiche
                     photos_str = str(row.get("Photos", ""))
                     fichiers = photos_str.split(",") if "," in photos_str else photos_str.split(";")
                     photos_valides = [f.strip() for f in fichiers if os.path.exists(os.path.join(PHOTOS_DIR, f.strip()))]
@@ -277,7 +280,7 @@ with tab_admin:
         else:
             st.info("Aucune intervention enregistrée pour l'instant.")
 
-        # --- GESTION DISCRÈTE DES ÉQUIPES EN BAS DE PAGE ---
+        # --- PARAMÈTRES EN BAS ---
         with st.expander("⚙️ Paramètres (Modifier les chantiers ou les maçons)"):
             st.markdown("##### 👷 Ouvriers enregistrés")
             st.caption(", ".join(config["macons"]))
