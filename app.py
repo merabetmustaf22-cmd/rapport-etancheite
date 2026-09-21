@@ -686,6 +686,7 @@ with tab_admin:
                 st.button("Export Excel (En attente de données)", disabled=True, use_container_width=True)
 
         with c_exp2:
+            # DESCRIPTION EXCEL VISIBLE EN BLANC
             st.markdown("""
                 <div style='color: #FFFFFF !important; font-size: 14px; font-weight: 600; line-height: 1.5; padding-top: 5px;'>
                     Le classeur inclut : Synthèse des surfaces, ratios de consommation, pointage des équipes et journal brut d'exécution.
@@ -713,6 +714,7 @@ with tab_admin:
 
                     c_info, c_btn = st.columns([3, 1])
                     with c_info:
+                        # NOMS DE CHANTIERS ET BADGES PHOTOS ENTIÈREMENT VISIBLES
                         st.markdown(f"""
                             <div style='margin-top: 8px;'>
                                 <span style='color: #FFFFFF !important; font-size: 16px; font-weight: 800;'>📁 {d_ch}</span>
