@@ -18,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS SPÉCIAL CLAVIER VIRTUEL FLUIDE (ANTI-ZOOM & ANTI-DÉCALAGE) ---
+# --- CSS STRUCTURÉ PAR ÉTAPES DANS DES CADRES DÉDIÉS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -26,7 +26,7 @@ st.markdown("""
     html, body, [class*="css"] {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         -webkit-tap-highlight-color: transparent;
-        touch-action: manipulation; /* Supprime le délai de double-tap */
+        touch-action: manipulation;
     }
 
     .stApp {
@@ -34,10 +34,9 @@ st.markdown("""
         overflow-x: hidden !important;
     }
 
-    /* Marge basse importante pour que le clavier ne cache jamais le formulaire */
     .block-container {
         padding-top: 0.8rem !important;
-        padding-bottom: 20rem !important; /* Laisse monter l'écran librement */
+        padding-bottom: 18rem !important;
         padding-left: 0.8rem !important;
         padding-right: 0.8rem !important;
         max-width: 100% !important;
@@ -50,20 +49,54 @@ st.markdown("""
     h1, h2, h3, h4, h5, h6 {
         color: #FFFFFF !important;
         font-weight: 800 !important;
-        word-break: normal !important;
     }
     .stWidgetLabel p, [data-testid="stWidgetLabel"] p, label p {
         color: #FFFFFF !important;
-        font-size: 15px !important;
+        font-size: 14px !important;
         font-weight: 700 !important;
         margin-bottom: 4px !important;
     }
 
     /* ========================================================= */
-    /* CASES DE SAISIE : POLICE STRICTE 16PX (ANTI-ZOOM CLAVIER) */
+    /* CADRES DES ÉTAPES (SECTIONS INDÉPENDANTES)                */
     /* ========================================================= */
-    input, textarea, 
+    .cadre-etape {
+        background-color: #0F172A !important;
+        border: 1px solid #334155 !important;
+        border-radius: 14px !important;
+        padding: 16px 14px !important;
+        margin-bottom: 16px !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+    }
+    .titre-etape {
+        color: #FFFFFF !important;
+        font-size: 16px !important;
+        font-weight: 800 !important;
+        margin-bottom: 12px !important;
+        display: flex !important;
+        align-items: center !important;
+        border-bottom: 1px solid #1E293B !important;
+        padding-bottom: 8px !important;
+    }
+    .pastille-num {
+        background: #0284C7;
+        color: #FFFFFF;
+        font-size: 12px;
+        font-weight: 900;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 8px;
+    }
+
+    /* ========================================================= */
+    /* TOUTES LES CASES : FOND BLANC PUR + TEXTE NOIR UNIFORME   */
+    /* ========================================================= */
     div[data-testid="stDateInput"] div[data-baseweb="input"],
+    div[data-testid="stDateInput"] div[data-baseweb="base-input"],
     div[data-testid="stDateInput"] input,
     div[data-testid="stTextInput"] div[data-baseweb="input"],
     div[data-testid="stTextInput"] input,
@@ -77,10 +110,9 @@ st.markdown("""
         -webkit-text-fill-color: #0F172A !important;
         border: 2px solid #CBD5E1 !important;
         border-radius: 10px !important;
-        font-size: 16px !important; /* EMPÊCHE CHROME DE FORCER UN ZOOM */
+        font-size: 16px !important;
         font-weight: 700 !important;
         min-height: 48px !important;
-        transform: translateZ(0); /* Accélération matérielle */
     }
 
     div[data-testid="stDateInput"] input {
@@ -88,9 +120,9 @@ st.markdown("""
         -webkit-text-fill-color: #0F172A !important;
         font-size: 16px !important;
         font-weight: 800 !important;
+        padding-left: 12px !important;
     }
 
-    /* Sélecteurs déroulants */
     .stSelectbox div[data-baseweb="select"] {
         background-color: #FFFFFF !important;
         border: 2px solid #CBD5E1 !important;
@@ -115,7 +147,7 @@ st.markdown("""
         font-weight: 700 !important;
     }
 
-    /* Menus déroulants */
+    /* MENUS DÉROULANTS */
     div[data-baseweb="popover"], ul[role="listbox"], li[role="option"] {
         background-color: #FFFFFF !important;
     }
@@ -126,10 +158,11 @@ st.markdown("""
         font-size: 15px !important;
     }
 
-    /* ONGLETS DU HAUT */
+    /* ONGLETS (TABS) EN HAUT */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 8px !important;
-        margin-bottom: 12px !important;
+        gap: 6px !important;
+        margin-bottom: 14px !important;
+        border-bottom: 1px solid #334155 !important;
     }
     .stTabs [data-baseweb="tab"] {
         background-color: #1E293B !important;
@@ -138,16 +171,16 @@ st.markdown("""
         padding: 8px 14px !important;
         height: 46px !important;
     }
-    .stTabs [data-baseweb="tab"] p {
+    .stTabs [data-baseweb="tab"] * {
         color: #FFFFFF !important;
-        font-weight: 800 !important;
+        font-weight: 700 !important;
         font-size: 13px !important;
     }
     .stTabs [aria-selected="true"] {
         background-color: #0F172A !important;
         border-bottom: 3px solid #38BDF8 !important;
     }
-    .stTabs [aria-selected="true"] p {
+    .stTabs [aria-selected="true"] * {
         color: #38BDF8 !important;
         font-weight: 900 !important;
     }
@@ -186,8 +219,8 @@ st.markdown("""
     [data-testid="stFileUploader"] section {
         background-color: #FFFFFF !important;
         border: 2px dashed #94A3B8 !important;
-        border-radius: 12px !important;
-        padding: 16px !important;
+        border-radius: 10px !important;
+        padding: 14px !important;
     }
     [data-testid="stFileUploader"] section * {
         color: #0F172A !important;
@@ -197,7 +230,7 @@ st.markdown("""
         background-color: #0284C7 !important;
         border: none !important;
         border-radius: 8px !important;
-        min-height: 44px !important;
+        min-height: 42px !important;
     }
     [data-testid="stFileUploader"] section button * {
         color: #FFFFFF !important;
@@ -328,10 +361,6 @@ st.markdown("""
         font-size: 12px !important;
         font-weight: 800 !important;
         margin: 2px 3px 2px 0 !important;
-    }
-    hr {
-        border-color: #334155 !important;
-        margin: 14px 0 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -668,12 +697,14 @@ config = charger_config()
 if "liste_consommations" not in st.session_state:
     st.session_state.liste_consommations = []
 
+# ONGLETS VISIBLES ET BIEN DÉFINIS
 tab_saisie, tab_admin = st.tabs(["📲 Saisie Terrain", "📊 Supervision & Rapports"])
 
 # -------------------------------------------------------------
-# ONGLET 1 : SAISIE TERRAIN ULTRA ERGONOMIQUE
+# ONGLET 1 : SAISIE TERRAIN DÉCOUPÉE EN CADRES DÉDIÉS
 # -------------------------------------------------------------
 with tab_saisie:
+    # BANDEAU D'EN-TÊTE
     st.markdown("""
         <div class='header-cadre'>
             <div style='display: flex; justify-content: space-between; align-items: center;'>
@@ -688,76 +719,115 @@ with tab_saisie:
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("### 📍 Localisation & Tâche")
-    date_jour = st.date_input("Date des travaux", value=date.today())
-    chantier_sel = st.selectbox("Projet / Chantier", config["chantiers"])
-    tache_sel = st.selectbox("Corps d'état / Ouvrage", config["taches"])
-    phase_travaux = st.selectbox("Phase de réalisation", [
-        "Pendant exécution / application",
-        "Avant travaux (État du support)",
-        "Après achèvement (Finition)",
-        "Détail technique / Gorge / Relevé",
-        "Épreuve d'eau (Test d'étanchéité)",
-        "Autre"
-    ])
+    # =========================================================
+    # CADRE 1 : LOCALISATION & TÂCHE
+    # =========================================================
+    st.markdown("""
+        <div class='cadre-etape'>
+            <div class='titre-etape'>
+                <span class='pastille-num'>1</span>
+                <span>Localisation & Tâche</span>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+    with st.container():
+        date_jour = st.date_input("Date des travaux", value=date.today())
+        chantier_sel = st.selectbox("Projet / Chantier", config["chantiers"])
+        tache_sel = st.selectbox("Corps d'état / Ouvrage", config["taches"])
+        phase_travaux = st.selectbox("Phase de réalisation", [
+            "Pendant exécution / application",
+            "Avant travaux (État du support)",
+            "Après achèvement (Finition)",
+            "Détail technique / Gorge / Relevé",
+            "Épreuve d'eau (Test d'étanchéité)",
+            "Autre"
+        ])
 
-    st.write("---")
-    st.markdown("### 👷 Équipe & Metré")
-    macons_presents = st.multiselect("Compagnons présents", config["macons"], placeholder="Sélectionnez l'équipe...")
+    # =========================================================
+    # CADRE 2 : ÉQUIPE & MÉTRÉ
+    # =========================================================
+    st.markdown("""
+        <div class='cadre-etape'>
+            <div class='titre-etape'>
+                <span class='pastille-num'>2</span>
+                <span>Équipe mobilisée & Métré</span>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+    with st.container():
+        macons_presents = st.multiselect("Compagnons présents", config["macons"], placeholder="Sélectionnez l'équipe...")
+        c_r1, c_r2 = st.columns([2, 1])
+        with c_r1:
+            rendement = st.number_input("Métré réalisé", min_value=0.0, step=1.0, format="%.2f")
+        with c_r2:
+            unite = st.selectbox("Unité", ["m²", "ML", "U"])
 
-    c_r1, c_r2 = st.columns([2, 1])
-    with c_r1:
-        rendement = st.number_input("Métré réalisé", min_value=0.0, step=1.0, format="%.2f")
-    with c_r2:
-        unite = st.selectbox("Unité", ["m²", "ML", "U"])
+    # =========================================================
+    # CADRE 3 : MATÉRIAUX APPLIQUÉS
+    # =========================================================
+    st.markdown("""
+        <div class='cadre-etape'>
+            <div class='titre-etape'>
+                <span class='pastille-num'>3</span>
+                <span>Matériaux & Produits Consommés</span>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+    with st.container():
+        if st.session_state.liste_consommations:
+            for idx_c, item in enumerate(st.session_state.liste_consommations):
+                col_txt, col_sup = st.columns([3, 1])
+                with col_txt:
+                    st.markdown(f"<span class='tag-materiau'>📦 {item['produit']} : <b>{item['quantite']} {item['unite']}</b></span>", unsafe_allow_html=True)
+                with col_sup:
+                    st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
+                    if st.button("Suppr.", key=f"del_{idx_c}"):
+                        st.session_state.liste_consommations.pop(idx_c)
+                        st.rerun()
+                    st.markdown('</div>', unsafe_allow_html=True)
 
-    st.write("---")
-    st.markdown("### 🧪 Matériaux Consommés")
+        with st.expander("➕ Ajouter un matériau consommé", expanded=True):
+            nouveau_mat = st.selectbox("Produit appliqué", config["materiaux"], key="ajout_mat")
+            cp2, cp3 = st.columns([1, 1])
+            with cp2:
+                nouvelle_qte = st.number_input("Quantité", min_value=0.0, step=1.0, format="%.2f", key="ajout_qte")
+            with cp3:
+                nouvelle_uni = st.selectbox("Unité", ["Seaux/Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "Cartouches", "U"], key="ajout_uni")
 
-    if st.session_state.liste_consommations:
-        for idx_c, item in enumerate(st.session_state.liste_consommations):
-            col_txt, col_sup = st.columns([3, 1])
-            with col_txt:
-                st.markdown(f"<span class='tag-materiau'>📦 {item['produit']} : <b>{item['quantite']} {item['unite']}</b></span>", unsafe_allow_html=True)
-            with col_sup:
-                st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
-                if st.button("Suppr.", key=f"del_{idx_c}"):
-                    st.session_state.liste_consommations.pop(idx_c)
+            if st.button("➕ Ajouter au registre", use_container_width=True):
+                if nouvelle_qte > 0:
+                    st.session_state.liste_consommations.append({
+                        "produit": nouveau_mat,
+                        "quantite": nouvelle_qte,
+                        "unite": nouvelle_uni
+                    })
                     st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
+                else:
+                    st.warning("⚠️ Précisez une quantité > 0.")
 
-    with st.expander("➕ Enregistrer un matériau appliqué", expanded=True):
-        nouveau_mat = st.selectbox("Produit appliqué", config["materiaux"], key="ajout_mat")
-        cp2, cp3 = st.columns([1, 1])
-        with cp2:
-            nouvelle_qte = st.number_input("Quantité", min_value=0.0, step=1.0, format="%.2f", key="ajout_qte")
-        with cp3:
-            nouvelle_uni = st.selectbox("Unité", ["Seaux/Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "Cartouches", "U"], key="ajout_uni")
+    # =========================================================
+    # CADRE 4 : JUSTIFICATIFS & TRANSMISSION
+    # =========================================================
+    st.markdown("""
+        <div class='cadre-etape'>
+            <div class='titre-etape'>
+                <span class='pastille-num'>4</span>
+                <span>Documentation Photo & Remarques</span>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+    with st.container():
+        photos_galerie = st.file_uploader(
+            "Photos justificatives (Horodatage automatique)",
+            type=["jpg", "jpeg", "png"],
+            accept_multiple_files=True
+        )
+        legende = st.text_input("Observations techniques", placeholder="Ex : Support sec, dépoussiéré avant primaire...")
 
-        if st.button("➕ Ajouter au registre", use_container_width=True):
-            if nouvelle_qte > 0:
-                st.session_state.liste_consommations.append({
-                    "produit": nouveau_mat,
-                    "quantite": nouvelle_qte,
-                    "unite": nouvelle_uni
-                })
-                st.rerun()
-            else:
-                st.warning("⚠️ Précisez une quantité > 0.")
-
-    st.write("---")
-    st.markdown("### 📸 Photos Justificatives")
-    photos_galerie = st.file_uploader(
-        "Photos de l'ouvrage (Horodatage automatique)",
-        type=["jpg", "jpeg", "png"],
-        accept_multiple_files=True
-    )
-    legende = st.text_input("Observations techniques", placeholder="Ex : Support sec, dépoussiéré avant primaire...")
-
-    st.write("")
-    st.markdown('<div class="btn-valider">', unsafe_allow_html=True)
-    envoyer_btn = st.button("🚀 TRANSMETTRE LE RAPPORT", use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+        st.write("")
+        st.markdown('<div class="btn-valider">', unsafe_allow_html=True)
+        envoyer_btn = st.button("🚀 TRANSMETTRE LE RAPPORT", use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     if envoyer_btn:
         if not macons_presents:
