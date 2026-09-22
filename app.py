@@ -27,12 +27,10 @@ st.markdown("""
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
-    /* Fond général bleu nuit */
     .stApp {
         background-color: #0B1120 !important;
     }
 
-    /* FORÇAGE BLANC PUR SUR TOUT TEXTE STREAMLIT */
     .stMarkdown, .stMarkdown p, .stCaption, .stCaption p, span, label, p {
         color: #FFFFFF !important;
     }
@@ -44,7 +42,6 @@ st.markdown("""
         hyphens: none !important;
     }
 
-    /* EN-TÊTE SMARTPHONE */
     .header-cadre {
         background-color: #0F172A;
         border-radius: 14px;
@@ -77,14 +74,12 @@ st.markdown("""
         white-space: nowrap !important;
     }
 
-    /* LABELS FORMULAIRES */
     .stWidgetLabel p, [data-testid="stWidgetLabel"] p, label p {
         color: #FFFFFF !important;
         font-size: 15px !important;
         font-weight: 700 !important;
     }
 
-    /* INPUTS EN BLANC ET TEXTE NOIR */
     .stTextInput input, .stDateInput input, .stNumberInput input {
         background-color: #FFFFFF !important;
         color: #0F172A !important;
@@ -113,7 +108,6 @@ st.markdown("""
         font-weight: 700 !important;
     }
 
-    /* MENUS DÉROULANTS */
     div[data-baseweb="popover"], ul[role="listbox"], li[role="option"] {
         background-color: #FFFFFF !important;
     }
@@ -122,7 +116,6 @@ st.markdown("""
         font-weight: 700 !important;
     }
 
-    /* CALENDRIER */
     div[data-baseweb="calendar"], div[data-baseweb="calendar"] * {
         color: #0F172A !important;
         font-weight: 700 !important;
@@ -132,7 +125,6 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* FILE UPLOADER */
     [data-testid="stFileUploader"] section {
         background-color: #FFFFFF !important;
         border: 2px dashed #94A3B8 !important;
@@ -152,7 +144,6 @@ st.markdown("""
         font-weight: 700 !important;
     }
 
-    /* VOLETS DÉPLIANTS */
     [data-testid="stExpander"] summary {
         background-color: #1E293B !important;
         border-radius: 8px !important;
@@ -163,7 +154,6 @@ st.markdown("""
         font-weight: 800 !important;
     }
 
-    /* CHIFFRES STATISTIQUES / KPI */
     [data-testid="stMetricValue"] {
         color: #FFFFFF !important;
         font-size: 32px !important;
@@ -175,7 +165,6 @@ st.markdown("""
         font-weight: 800 !important;
     }
 
-    /* BOUTONS D'ACTION */
     div.stButton > button {
         background-color: #0284C7 !important;
         color: #FFFFFF !important;
@@ -209,7 +198,6 @@ st.markdown("""
         width: 100% !important;
     }
 
-    /* BOUTONS DE TÉLÉCHARGEMENT */
     div.stDownloadButton > button {
         background-color: #FFFFFF !important;
         color: #0F172A !important;
@@ -224,7 +212,6 @@ st.markdown("""
         font-weight: 800 !important;
     }
 
-    /* CARTES DES INTERVENTIONS ET TEXTES ULTRA LISIBLES */
     .card-intervention {
         background-color: #111827 !important;
         border-radius: 14px !important;
@@ -298,7 +285,6 @@ st.markdown("""
         margin: 3px 4px 3px 0 !important;
     }
 
-    /* ONGLETS */
     .stTabs [data-baseweb="tab-list"] {
         gap: 6px;
     }
@@ -461,96 +447,199 @@ def appliquer_watermark(image_file, chantier, tache, phase, date_str):
     except Exception:
         return image_file.getbuffer()
 
+# =========================================================================
+# NOUVELLE GÉNÉRATION EXCEL : FEUILLE PAR CHANTIER + DESIGN CORPORATE
+# =========================================================================
 def generer_rapport_excel(df_source):
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
 
-    header_fill = PatternFill(start_color="0F766E", end_color="0F766E", fill_type="solid")
-    header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
-    data_font = Font(name="Calibri", size=10)
+    # Styles Corporate
+    c_navy = "1E3A8A"        # Bleu Marine Corporate
+    c_header = "0F766E"      # Vert Émeraude Technique
+    c_row_alt = "F8FAFC"     # Alternance claire
+    c_total = "E2E8F0"       # Fond total
+    
+    font_title = Font(name="Calibri", size=14, bold=True, color="FFFFFF")
+    font_header = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    font_data = Font(name="Calibri", size=10, color="0F172A")
+    font_bold = Font(name="Calibri", size=10, bold=True, color="0F172A")
+    font_total = Font(name="Calibri", size=11, bold=True, color="1E3A8A")
+
+    fill_title = PatternFill(start_color=c_navy, end_color=c_navy, fill_type="solid")
+    fill_header = PatternFill(start_color=c_header, end_color=c_header, fill_type="solid")
+    fill_alt = PatternFill(start_color=c_row_alt, end_color=c_row_alt, fill_type="solid")
+    fill_tot = PatternFill(start_color=c_total, end_color=c_total, fill_type="solid")
+
     border_thin = Border(
         left=Side(style='thin', color='CBD5E1'),
         right=Side(style='thin', color='CBD5E1'),
         top=Side(style='thin', color='CBD5E1'),
         bottom=Side(style='thin', color='CBD5E1')
     )
+    border_double = Border(
+        top=Side(style='thin', color='94A3B8'),
+        bottom=Side(style='double', color='0F172A')
+    )
 
-    def styliser_feuille(ws, titre_entete):
-        for col in range(1, len(titre_entete) + 1):
-            cell = ws.cell(row=1, column=col)
-            cell.fill = header_fill
-            cell.font = header_font
-            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    # 1. FEUILLE DE SYNTHÈSE GÉNÉRALE
+    ws_main = wb.create_sheet(title="Synthèse Générale")
+    ws_main.merge_cells("A1:E1")
+    ws_main["A1"] = "TABLEAU DE BORD GLOBAL - SUIVI DES CHANTIERS D'ÉTANCHÉITÉ"
+    ws_main["A1"].font = font_title
+    ws_main["A1"].fill = fill_title
+    ws_main["A1"].alignment = Alignment(horizontal="center", vertical="center")
+    ws_main.row_dimensions[1].height = 36
 
-        for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=len(titre_entete)):
-            for cell in row:
-                cell.font = data_font
-                cell.border = border_thin
-                if isinstance(cell.value, (int, float)):
-                    cell.alignment = Alignment(horizontal="right", vertical="center")
-                else:
-                    cell.alignment = Alignment(horizontal="left", vertical="center")
+    headers_syn = ["Chantier / Projet", "Surface Totale (m²)", "Linéaire Total (ML)", "Unités (U)", "Interventions"]
+    ws_main.append([])
+    ws_main.append(headers_syn)
+    ws_main.row_dimensions[3].height = 26
 
-        ws.row_dimensions[1].height = 28
-        for col in ws.columns:
-            max_len = max(len(str(cell.value or '')) for cell in col)
-            col_letter = get_column_letter(col[0].column)
-            ws.column_dimensions[col_letter].width = max(max_len + 5, 13)
+    for col_i in range(1, len(headers_syn) + 1):
+        cell = ws_main.cell(row=3, column=col_i)
+        cell.font = font_header
+        cell.fill = fill_header
+        cell.alignment = Alignment(horizontal="center", vertical="center")
 
-    # 1. Synthèse
-    ws1 = wb.create_sheet(title="Synthèse Chantiers")
-    headers1 = ["Chantier", "Surface Réalisée (m²)", "Linéaire Réalisé (ML)", "Unités (U)", "Total Interventions"]
-    ws1.append(headers1)
     chantiers_uniques = [c for c in df_source["Chantier"].dropna().unique() if not str(c).startswith("2026-") and str(c).strip()]
+    
+    tot_m2_glob = 0.0
+    tot_ml_glob = 0.0
+    tot_u_glob = 0.0
+
+    current_r = 4
     for ch in sorted(chantiers_uniques):
         sub = df_source[df_source["Chantier"] == ch].copy()
         sub["Rendement_num"] = pd.to_numeric(sub.get("Rendement", 0), errors='coerce').fillna(0)
         unite_col = sub.get("Unite", pd.Series([""] * len(sub))).astype(str)
-        m2 = sub[unite_col.str.contains("m²", na=False)]["Rendement_num"].sum()
-        ml = sub[unite_col.str.contains("ML", na=False)]["Rendement_num"].sum()
-        u = sub[unite_col.str.contains("U", na=False)]["Rendement_num"].sum()
-        ws1.append([ch, round(m2, 2), round(ml, 2), round(u, 2), len(sub)])
-    styliser_feuille(ws1, headers1)
 
-    # 2. Consommation
-    ws2 = wb.create_sheet(title="Consommation Matériaux")
-    headers2 = ["Date", "Chantier", "Corps d'État", "Matériaux Consommés", "Remarques"]
-    ws2.append(headers2)
-    for _, r in df_source.iterrows():
-        c_mat = str(r.get("Consommation", "")).strip()
-        if not c_mat or c_mat == "nan":
-            c_mat = "Aucun"
-        ws2.append([r.get("Date", ""), r.get("Chantier", ""), r.get("Corps_d_etat", ""), c_mat, r.get("Legende", "")])
-    styliser_feuille(ws2, headers2)
+        m2 = float(sub[unite_col.str.contains("m²", na=False)]["Rendement_num"].sum())
+        ml = float(sub[unite_col.str.contains("ML", na=False)]["Rendement_num"].sum())
+        u = float(sub[unite_col.str.contains("U", na=False)]["Rendement_num"].sum())
 
-    # 3. Effectif
-    ws3 = wb.create_sheet(title="Pointage Ouvriers")
-    headers3 = ["Date", "Chantier", "Corps d'État", "Effectif Présent", "Nombre d'Ouvriers"]
-    ws3.append(headers3)
-    for _, r in df_source.iterrows():
-        ws3.append([r.get("Date", ""), r.get("Chantier", ""), r.get("Corps_d_etat", ""), r.get("Effectif", ""), r.get("Nb_Ouvriers", "")])
-    styliser_feuille(ws3, headers3)
+        tot_m2_glob += m2
+        tot_ml_glob += ml
+        tot_u_glob += u
 
-    # 4. Journal Détaillé
-    ws4 = wb.create_sheet(title="Journal Détaillé")
-    headers4 = ["Date", "Chantier", "Corps d'État", "Phase", "Rendement", "Unité", "Consommation", "Effectif", "Observation"]
-    ws4.append(headers4)
-    for _, r in df_source.iterrows():
-        c_mat = str(r.get("Consommation", "")).strip()
-        if not c_mat or c_mat == "nan":
-            c_mat = "-"
-        ws4.append([
-            r.get("Date", ""),
-            r.get("Chantier", ""),
-            r.get("Corps_d_etat", ""),
-            r.get("Phase", ""),
-            pd.to_numeric(r.get("Rendement", 0), errors='coerce') or 0,
-            r.get("Unite", ""),
-            c_mat,
-            r.get("Effectif", ""),
-            r.get("Legende", "")
+        ws_main.append([ch, round(m2, 2), round(ml, 2), round(u, 2), len(sub)])
+        
+        for c_idx in range(1, 6):
+            c_cell = ws_main.cell(row=current_r, column=c_idx)
+            c_cell.font = font_data
+            c_cell.border = border_thin
+            if current_r % 2 == 1:
+                c_cell.fill = fill_alt
+            if c_idx >= 2:
+                c_cell.alignment = Alignment(horizontal="right", vertical="center")
+            else:
+                c_cell.alignment = Alignment(horizontal="left", vertical="center")
+        current_r += 1
+
+    # Ligne Total Synthèse
+    ws_main.append(["TOTAL GÉNÉRAL", round(tot_m2_glob, 2), round(tot_ml_glob, 2), round(tot_u_glob, 2), len(df_source)])
+    for c_idx in range(1, 6):
+        c_cell = ws_main.cell(row=current_r, column=c_idx)
+        c_cell.font = font_total
+        c_cell.fill = fill_tot
+        c_cell.border = border_double
+        if c_idx >= 2:
+            c_cell.alignment = Alignment(horizontal="right", vertical="center")
+
+    for col in ws_main.columns:
+        max_l = max(len(str(c.value or '')) for c in col)
+        col_letter = get_column_letter(col[0].column)
+        ws_main.column_dimensions[col_letter].width = max(max_l + 6, 16)
+
+    # 2. CRÉATION D'UNE FEUILLE DÉTAILLÉE PAR CHANTIER
+    for ch in sorted(chantiers_uniques):
+        sub_ch = df_source[df_source["Chantier"] == ch].copy()
+        clean_titre = re.sub(r'[^a-zA-Z0-9_-]', '_', ch.split('(')[0].strip())[:28]
+        ws_ch = wb.create_sheet(title=clean_titre)
+
+        # Cartouche du chantier
+        ws_ch.merge_cells("A1:H1")
+        ws_ch["A1"] = f"REGISTRE D'ATTACHEMENT TECHNIQUE — CHANTIER : {ch.upper()}"
+        ws_ch["A1"].font = font_title
+        ws_ch["A1"].fill = fill_title
+        ws_ch["A1"].alignment = Alignment(horizontal="center", vertical="center")
+        ws_ch.row_dimensions[1].height = 36
+
+        headers_ch = [
+            "Date", "Corps d'État / Ouvrage", "Phase Réalisation", 
+            "Rendement", "Unité", "Matériaux Consommés", 
+            "Équipe Présente", "Observations / Notes"
+        ]
+        ws_ch.append([])
+        ws_ch.append(headers_ch)
+        ws_ch.row_dimensions[3].height = 26
+
+        for col_i in range(1, len(headers_ch) + 1):
+            cell = ws_ch.cell(row=3, column=col_i)
+            cell.font = font_header
+            cell.fill = fill_header
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        row_ch_idx = 4
+        m2_chantier = 0.0
+        ml_chantier = 0.0
+
+        for _, r in sub_ch.iterrows():
+            c_mat = str(r.get("Consommation", "")).strip()
+            if not c_mat or c_mat == "nan":
+                c_mat = "Aucun"
+
+            rend_val = pd.to_numeric(r.get("Rendement", 0), errors='coerce') or 0.0
+            unite_val = str(r.get("Unite", ""))
+            if "m²" in unite_val:
+                m2_chantier += rend_val
+            elif "ML" in unite_val:
+                ml_chantier += rend_val
+
+            ws_ch.append([
+                r.get("Date", ""),
+                r.get("Corps_d_etat", ""),
+                r.get("Phase", ""),
+                rend_val,
+                unite_val,
+                c_mat,
+                r.get("Effectif", ""),
+                r.get("Legende", "")
+            ])
+
+            for c_i in range(1, 9):
+                cell = ws_ch.cell(row=row_ch_idx, column=c_i)
+                cell.font = font_data
+                cell.border = border_thin
+                if row_ch_idx % 2 == 1:
+                    cell.fill = fill_alt
+                if c_i == 4:
+                    cell.alignment = Alignment(horizontal="right", vertical="center")
+                elif c_i in [1, 5]:
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+                else:
+                    cell.alignment = Alignment(horizontal="left", vertical="center")
+
+            row_ch_idx += 1
+
+        # Ligne de total du chantier
+        ws_ch.append([
+            "TOTAL RÉALISÉ", "", "", 
+            f"{round(m2_chantier, 2)} m² | {round(ml_chantier, 2)} ML", 
+            "", "", f"{len(sub_ch)} rapports", ""
         ])
-    styliser_feuille(ws4, headers4)
+        for c_i in range(1, 9):
+            cell = ws_ch.cell(row=row_ch_idx, column=c_i)
+            cell.font = font_total
+            cell.fill = fill_tot
+            cell.border = border_double
+            if c_i == 4:
+                cell.alignment = Alignment(horizontal="right", vertical="center")
+
+        for col in ws_ch.columns:
+            max_l = max(len(str(c.value or '')) for c in col)
+            col_letter = get_column_letter(col[0].column)
+            ws_ch.column_dimensions[col_letter].width = max(max_l + 5, 14)
 
     out = io.BytesIO()
     wb.save(out)
@@ -871,10 +960,9 @@ with tab_admin:
                 st.button("Export Excel (En attente de données)", disabled=True, use_container_width=True)
 
         with c_exp2:
-            # DESCRIPTION EXCEL VISIBLE EN BLANC PUR
             st.markdown("""
                 <div style='color: #FFFFFF !important; font-size: 14px; font-weight: 600; line-height: 1.5; padding-top: 6px;'>
-                    Le classeur inclut : Synthèse des surfaces, ratios de consommation, pointage des équipes et journal brut d'exécution.
+                    Le classeur inclut : Synthèse générale et onglets séparés par chantier avec totaux automatiques.
                 </div>
             """, unsafe_allow_html=True)
 
@@ -899,7 +987,6 @@ with tab_admin:
 
                     c_info, c_btn = st.columns([3, 1])
                     with c_info:
-                        # NOMS DE CHANTIERS ET BADGES EN BLANC PUR ET BLEU ÉCLATANT
                         st.markdown(f"""
                             <div style='display: flex; align-items: center; margin-top: 8px;'>
                                 <span style='color: #FFFFFF !important; font-size: 16px; font-weight: 800;'>📁 {d_ch}</span>
@@ -912,7 +999,6 @@ with tab_admin:
                         st.download_button(label=f"Télécharger ZIP", data=zip_buf.getvalue(), file_name=f"Photos_{d_ch}.zip", mime="application/zip", key=f"z_{d_ch}", use_container_width=True)
 
         st.write("---")
-        # --- REGISTRE D'ATTACHEMENT (ZÉRO GRIS) ---
         if df_all is not None and not df_all.empty and "Chantier" in df_all.columns:
             st.markdown("### 🔍 Registre d'Attachement & Suivi des Ouvrages")
             chantiers_bruts = [c for c in df_all["Chantier"].dropna().unique() if not str(c).startswith("2026-") and str(c).strip()]
@@ -994,4 +1080,3 @@ with tab_admin:
 
     elif pin != "":
         st.error("❌ Code d'accès non autorisé.")
-    
