@@ -1,12 +1,12 @@
 import streamlit as st
 import pandas as pd
-from datetime import date
+from datetime import date, datetime
 import os
 import json
 import io
 import zipfile
 import re
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
@@ -18,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS MOBILE FIRST & HAUTE VISIBILITÉ ---
+# --- CSS HAUTE LUMINOSITÉ SANS AUCUN TEXTE GRIS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -27,21 +27,25 @@ st.markdown("""
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
-    /* Fond général sombre */
+    /* Fond général bleu nuit */
     .stApp {
         background-color: #0B1120 !important;
     }
 
-    /* TITRES GÉNÉRAUX SANS COUPURE */
+    /* TOUS LES TITRES EN BLANC PUR ÉCLATANT */
     h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5 {
         color: #FFFFFF !important;
         font-weight: 800 !important;
         word-break: normal !important;
-        overflow-wrap: break-word !important;
         hyphens: none !important;
     }
 
-    /* EN-TÊTE CALIBRÉ POUR SMARTPHONE (ZÉRO MOT COUPÉ) */
+    /* TEXTES GÉNÉRAUX EN BLANC PUR (PLUS DE GRIS) */
+    .stMarkdown p, .stCaption p, [data-testid="stMarkdownContainer"] p {
+        color: #FFFFFF !important;
+    }
+
+    /* EN-TÊTE SMARTPHONE SANS MOT COUPÉ */
     .header-cadre {
         background-color: #0F172A;
         border-radius: 14px;
@@ -60,10 +64,10 @@ st.markdown("""
         hyphens: none !important;
     }
     .header-sub {
-        font-size: 12px !important;
+        font-size: 13px !important;
         color: #38BDF8 !important;
         margin-top: 5px !important;
-        font-weight: 600 !important;
+        font-weight: 700 !important;
         line-height: 1.3 !important;
     }
     .badge-pro {
@@ -77,14 +81,14 @@ st.markdown("""
         white-space: nowrap !important;
     }
 
-    /* LABELS DES CHAMPS */
+    /* LABELS DES FORMULAIRES */
     .stWidgetLabel p, [data-testid="stWidgetLabel"] p, label p {
         color: #FFFFFF !important;
-        font-size: 14px !important;
+        font-size: 15px !important;
         font-weight: 700 !important;
     }
 
-    /* CASES DE FORMULAIRE (FOND BLANC + TEXTE NOIR) */
+    /* CASES DE SAISIE EN FOND BLANC ET TEXTE SOMBRE */
     .stTextInput input, .stDateInput input, .stNumberInput input {
         background-color: #FFFFFF !important;
         color: #0F172A !important;
@@ -92,6 +96,10 @@ st.markdown("""
         font-weight: 700 !important;
         border: 2px solid #CBD5E1 !important;
         border-radius: 8px !important;
+    }
+    .stTextInput input::placeholder {
+        color: #64748B !important;
+        font-weight: 500 !important;
     }
     .stSelectbox div[data-baseweb="select"] {
         background-color: #FFFFFF !important;
@@ -113,7 +121,7 @@ st.markdown("""
         font-weight: 700 !important;
     }
 
-    /* MENUS DÉROULANTS (POPOVER) */
+    /* MENUS DÉROULANTS */
     div[data-baseweb="popover"], ul[role="listbox"], li[role="option"] {
         background-color: #FFFFFF !important;
     }
@@ -121,11 +129,8 @@ st.markdown("""
         color: #0F172A !important;
         font-weight: 700 !important;
     }
-    li[role="option"]:hover {
-        background-color: #E2E8F0 !important;
-    }
 
-    /* CALENDRIER DATEPICKER */
+    /* CALENDRIER */
     div[data-baseweb="calendar"], div[data-baseweb="calendar"] * {
         color: #0F172A !important;
         font-weight: 700 !important;
@@ -153,6 +158,17 @@ st.markdown("""
     [data-testid="stFileUploader"] section button * {
         color: #FFFFFF !important;
         font-weight: 700 !important;
+    }
+
+    /* VOLETS DÉPLIANTS (EXPANDERS) EN BLANC BRILLANT */
+    [data-testid="stExpander"] summary {
+        background-color: #1E293B !important;
+        border-radius: 8px !important;
+        border: 1px solid #334155 !important;
+    }
+    [data-testid="stExpander"] summary * {
+        color: #FFFFFF !important;
+        font-weight: 800 !important;
     }
 
     /* CHIFFRES STATISTIQUES / KPI */
@@ -219,7 +235,7 @@ st.markdown("""
         font-weight: 800 !important;
     }
 
-    /* CARTES DES INTERVENTIONS */
+    /* CARTES DES RAPPORTS ET ATTACHEMENTS */
     .card-intervention {
         background-color: #111827;
         border-radius: 14px;
@@ -229,7 +245,7 @@ st.markdown("""
         border-left: 5px solid #10B981;
     }
     .tag-projet {
-        font-size: 15px;
+        font-size: 16px;
         font-weight: 900;
         color: #FFFFFF !important;
     }
@@ -402,6 +418,44 @@ def sauvegarder_donnees(df_to_save):
     except Exception:
         return False
 
+# --- FONCTION DE WATERMARKING TECHNIQUE OFFICIEL SUR PHOTOS ---
+def appliquer_watermark(image_file, chantier, tache, phase, date_str):
+    try:
+        img = Image.open(image_file).convert("RGB")
+        w, h = img.size
+
+        overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(overlay)
+
+        band_h = max(int(h * 0.11), 80)
+        draw.rectangle([(0, h - band_h), (w, h)], fill=(15, 23, 42, 210))
+
+        font_size_titre = max(int(band_h * 0.32), 16)
+        font_size_sub = max(int(band_h * 0.24), 13)
+
+        try:
+            font_t = ImageFont.truetype("arial.ttf", font_size_titre)
+            font_s = ImageFont.truetype("arial.ttf", font_size_sub)
+        except Exception:
+            font_t = ImageFont.load_default()
+            font_s = ImageFont.load_default()
+
+        heure_actuelle = datetime.now().strftime("%H:%M")
+        ligne_1 = f"PROJET : {chantier}   |   DATE : {date_str} a {heure_actuelle}"
+        ligne_2 = f"OUVRAGE : {tache}   |   PHASE : {phase}"
+
+        marge_x = max(int(w * 0.03), 20)
+        draw.text((marge_x, h - band_h + int(band_h * 0.18)), ligne_1, fill=(255, 255, 255, 255), font=font_t)
+        draw.text((marge_x, h - band_h + int(band_h * 0.55)), ligne_2, fill=(56, 189, 248, 255), font=font_s)
+
+        img_finale = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
+        out_bytes = io.BytesIO()
+        img_finale.save(out_bytes, format="JPEG", quality=90)
+        return out_bytes.getvalue()
+    except Exception:
+        # En cas d'imprévu, sauvegarde sécurisée de la photo originale
+        return image_file.getbuffer()
+
 def generer_rapport_excel(df_source):
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
@@ -505,10 +559,9 @@ if "liste_consommations" not in st.session_state:
 tab_saisie, tab_admin = st.tabs(["📲 Saisie Terrain", "📊 Espace Encadrement & Rapports"])
 
 # -------------------------------------------------------------
-# ONGLET 1 : SAISIE TERRAIN (CALIBRÉE SMARTPHONE)
+# ONGLET 1 : SAISIE TERRAIN HAUTE LISIBILITÉ
 # -------------------------------------------------------------
 with tab_saisie:
-    # EN-TÊTE SANS AUCUNE COUPURE DE MOTS
     st.markdown("""
         <div class='header-cadre'>
             <div style='display: flex; justify-content: space-between; align-items: center;'>
@@ -585,9 +638,9 @@ with tab_saisie:
                 st.warning("⚠️ Précisez une quantité supérieure à 0.")
 
     st.write("---")
-    st.markdown("### 📸 Pièces Jointes & Justificatifs")
+    st.markdown("### 📸 Pièces Jointes & Filigrane Technique")
     photos_galerie = st.file_uploader(
-        "Photos justificatives de l'ouvrage (Sélection multiple)",
+        "Photos justificatives de l'ouvrage (Horodatage automatique)",
         type=["jpg", "jpeg", "png"],
         accept_multiple_files=True
     )
@@ -616,14 +669,13 @@ with tab_saisie:
 
                 for idx, p in enumerate(photos_galerie):
                     ext = ".jpg"
-                    if hasattr(p, "name") and os.path.splitext(p.name)[1]:
-                        ext = os.path.splitext(p.name)[1].lower()
-
                     nom_fichier = f"{tache_clean}_{idx+1}{ext}"
                     chemin_disque = os.path.join(chemin_cible, nom_fichier)
 
+                    # APPLICATION AUTOMATIQUE DU WATERMARK TECHNIQUE
+                    photo_bytes = appliquer_watermark(p, chantier_sel, tache_sel, phase_travaux, str(date_jour))
                     with open(chemin_disque, "wb") as f_img:
-                        f_img.write(p.getbuffer())
+                        f_img.write(photo_bytes)
 
                     saved_files.append(f"{dossier_chantier}/{dossier_date}/{nom_fichier}")
 
@@ -682,11 +734,11 @@ with tab_admin:
 
     if pin == ADMIN_PIN:
         with st.expander("⚙️ Configuration des Listes (Ajouter / Supprimer des options)", expanded=False):
-            st.markdown("##### 🛠️ Gestion des Chantiers, Tâches, Matériaux et Compagnons")
+            st.markdown("<p style='color: #FFFFFF !important; font-weight: 800; font-size: 15px;'>🛠️ Gestion des Chantiers, Tâches, Matériaux et Compagnons</p>", unsafe_allow_html=True)
             
-            # --- 1. CHANTIERS ---
+            # 1. CHANTIERS
             st.write("---")
-            st.markdown("**🏢 1. Chantiers / Projets**")
+            st.markdown("<p style='color: #38BDF8 !important; font-weight: 800;'>🏢 1. Chantiers / Projets</p>", unsafe_allow_html=True)
             c_ch1, c_ch2 = st.columns(2)
             with c_ch1:
                 nouveau_chantier = st.text_input("Nouveau chantier à ajouter", placeholder="Ex : NOUVEAU-PROJET...", key="add_ch")
@@ -708,9 +760,9 @@ with tab_admin:
                         st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
-            # --- 2. CORPS D'ÉTAT ---
+            # 2. CORPS D'ÉTAT
             st.write("---")
-            st.markdown("**🛠️ 2. Corps d'État / Tâches**")
+            st.markdown("<p style='color: #38BDF8 !important; font-weight: 800;'>🛠️ 2. Corps d'État / Tâches</p>", unsafe_allow_html=True)
             c_t1, c_t2 = st.columns(2)
             with c_t1:
                 nouvelle_tache = st.text_input("Nouvelle tâche à ajouter", placeholder="Ex : ÉTANCHÉITÉ CUVELAGE...", key="add_tache")
@@ -732,9 +784,9 @@ with tab_admin:
                         st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
-            # --- 3. MATÉRIAUX ---
+            # 3. MATÉRIAUX
             st.write("---")
-            st.markdown("**🧪 3. Matériaux & Produits Consommés**")
+            st.markdown("<p style='color: #38BDF8 !important; font-weight: 800;'>🧪 3. Matériaux & Produits Consommés</p>", unsafe_allow_html=True)
             c_m1, c_m2 = st.columns(2)
             with c_m1:
                 nouveau_mat = st.text_input("Nouveau matériau à ajouter", placeholder="Ex : RESINE POLYURETHANE...", key="add_mat")
@@ -756,9 +808,9 @@ with tab_admin:
                         st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
-            # --- 4. COMPAGNONS / OUVRIERS ---
+            # 4. COMPAGNONS
             st.write("---")
-            st.markdown("**👷 4. Compagnons / Équipe**")
+            st.markdown("<p style='color: #38BDF8 !important; font-weight: 800;'>👷 4. Compagnons / Équipe</p>", unsafe_allow_html=True)
             c_o1, c_o2 = st.columns(2)
             with c_o1:
                 nouveau_macon = st.text_input("Nouvel ouvrier à ajouter", placeholder="Ex : NOM & Prénom...", key="add_macon")
@@ -788,7 +840,6 @@ with tab_admin:
         for root, _, files in os.walk(PHOTOS_BASE_DIR):
             total_photos += len([f for f in files if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
 
-        # Cartes KPI
         kpi1, kpi2, kpi3 = st.columns(3)
         with kpi1:
             st.metric("Rapports Validés", f"{len(df_all) if df_all is not None else 0}")
@@ -870,7 +921,7 @@ with tab_admin:
 
                 conso_val = str(row.get("Consommation", "")).strip()
                 if not conso_val or conso_val == "nan" or conso_val == "Aucun":
-                    badge_conso_html = "<span style='color: #94A3B8 !important; font-size: 13px; font-style: italic;'>Aucune consommation déclarée</span>"
+                    badge_conso_html = "<span style='color: #38BDF8 !important; font-size: 13px; font-weight: 600;'>📦 Aucune consommation déclarée</span>"
                 else:
                     items_conso = conso_val.split(" | ")
                     badge_conso_html = "".join([f"<span class='tag-materiau'>🧪 {c}</span>" for c in items_conso])
@@ -889,10 +940,10 @@ with tab_admin:
                         <div style='margin: 10px 0;'>
                             {badge_conso_html}
                         </div>
-                        <div style='color: #FFFFFF !important; font-size: 14px; font-weight: 600; margin-top: 8px;'>
+                        <div style='color: #FFFFFF !important; font-size: 14px; font-weight: 700; margin-top: 8px;'>
                             👷 <b>Effectif présent :</b> {row.get("Effectif", "")}
                         </div>
-                        <div style='color: #E2E8F0 !important; font-size: 14px; margin-top: 6px; font-style: italic;'>
+                        <div style='color: #FFFFFF !important; font-size: 14px; margin-top: 6px; font-style: italic;'>
                             💬 <b>Note de chantier :</b> {row.get("Legende", "R.A.S")}
                         </div>
                     </div>
