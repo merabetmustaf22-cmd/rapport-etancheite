@@ -18,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS ULTRA-SOUPLE ERGONOMIE MOBILE FIRST ---
+# --- CSS COMPLET SPÉCIAL SMARTPHONE & INVERSION DES CASES ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -26,10 +26,8 @@ st.markdown("""
     html, body, [class*="css"] {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         -webkit-tap-highlight-color: transparent;
-        -webkit-overflow-scrolling: touch;
     }
 
-    /* Suppression des marges mortes sur smartphone */
     .stApp {
         background-color: #0B1120 !important;
         overflow-x: hidden !important;
@@ -42,48 +40,51 @@ st.markdown("""
         max-width: 100% !important;
     }
 
-    /* Empêcher tout débordement horizontal */
-    body {
-        overflow-x: hidden !important;
-    }
-
-    /* TEXTES SUR FOND BLEU NUIT */
+    /* TITRES ET TEXTES SUR FOND NOIR */
     .stMarkdown, .stMarkdown p, .stCaption, .stCaption p, [data-testid="stMarkdownContainer"] p {
         color: #FFFFFF !important;
     }
-
     h1, h2, h3, h4, h5, h6 {
         color: #FFFFFF !important;
         font-weight: 800 !important;
         word-break: normal !important;
         hyphens: none !important;
-        margin-top: 0.4rem !important;
-        margin-bottom: 0.4rem !important;
     }
-
     .stWidgetLabel p, [data-testid="stWidgetLabel"] p, label p {
         color: #FFFFFF !important;
         font-size: 15px !important;
         font-weight: 700 !important;
-        margin-bottom: 4px !important;
+        margin-bottom: 5px !important;
     }
 
-    /* INPUTS TACTILES ERGONOMIQUES (16px pour zéro zoom auto) */
-    input, textarea, 
-    .stTextInput input, 
-    .stDateInput input, 
-    .stNumberInput input,
-    div[data-baseweb="input"] input,
-    div[data-baseweb="base-input"] input {
+    /* ========================================================= */
+    /* TOUTES LES CASES : FOND BLANC PUR + TEXTE NOIR NET       */
+    /* ========================================================= */
+    div[data-testid="stDateInput"] div[data-baseweb="input"],
+    div[data-testid="stDateInput"] input,
+    div[data-testid="stTextInput"] div[data-baseweb="input"],
+    div[data-testid="stTextInput"] input,
+    div[data-testid="stNumberInput"] div[data-baseweb="input"],
+    div[data-testid="stNumberInput"] input,
+    div[data-baseweb="base-input"],
+    div[data-baseweb="input"] {
         background-color: #FFFFFF !important;
+        background: #FFFFFF !important;
         color: #0F172A !important;
         -webkit-text-fill-color: #0F172A !important;
-        font-size: 16px !important; /* CRUCIAL pour mobile */
-        font-weight: 700 !important;
         border: 2px solid #CBD5E1 !important;
         border-radius: 10px !important;
-        min-height: 48px !important; /* Hauteur tactile idéale */
-        padding: 8px 12px !important;
+        font-size: 16px !important;
+        font-weight: 800 !important;
+        min-height: 48px !important;
+    }
+
+    div[data-testid="stDateInput"] input {
+        color: #0F172A !important;
+        -webkit-text-fill-color: #0F172A !important;
+        font-size: 16px !important;
+        font-weight: 800 !important;
+        padding-left: 14px !important;
     }
 
     .stSelectbox div[data-baseweb="select"] {
@@ -108,8 +109,6 @@ st.markdown("""
         background-color: #0F766E !important;
         color: #FFFFFF !important;
         font-weight: 700 !important;
-        border-radius: 6px !important;
-        padding: 4px 8px !important;
     }
 
     /* MENUS DÉROULANTS */
@@ -122,11 +121,8 @@ st.markdown("""
         font-weight: 700 !important;
         font-size: 15px !important;
     }
-    li[role="option"] {
-        min-height: 44px !important;
-    }
 
-    /* CALENDRIER DATEPICKER */
+    /* CALENDRIER DE SÉLECTION */
     div[data-baseweb="calendar"], div[data-baseweb="calendar"] * {
         color: #0F172A !important;
         -webkit-text-fill-color: #0F172A !important;
@@ -138,7 +134,35 @@ st.markdown("""
         -webkit-text-fill-color: #FFFFFF !important;
     }
 
-    /* EN-TÊTE ÉLÉGANT ET COMPACT */
+    /* ========================================================= */
+    /* LES ONGLETS (TABS) EN HAUT : NETS ET TRÈS VISIBLES        */
+    /* ========================================================= */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px !important;
+        margin-bottom: 12px !important;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background-color: #1E293B !important;
+        border-radius: 8px 8px 0px 0px !important;
+        border: 1px solid #334155 !important;
+        padding: 10px 16px !important;
+        height: 48px !important;
+    }
+    .stTabs [data-baseweb="tab"] p {
+        color: #FFFFFF !important;
+        font-weight: 800 !important;
+        font-size: 14px !important;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #0F172A !important;
+        border-bottom: 3px solid #38BDF8 !important;
+    }
+    .stTabs [aria-selected="true"] p {
+        color: #38BDF8 !important;
+        font-weight: 900 !important;
+    }
+
+    /* EN-TÊTE */
     .header-cadre {
         background-color: #0F172A;
         border-radius: 12px;
@@ -170,7 +194,7 @@ st.markdown("""
         white-space: nowrap !important;
     }
 
-    /* UPLOADER PHOTOS TACTILE */
+    /* UPLOADER PHOTOS */
     [data-testid="stFileUploader"] section {
         background-color: #FFFFFF !important;
         border: 2px dashed #94A3B8 !important;
@@ -192,20 +216,7 @@ st.markdown("""
         font-weight: 700 !important;
     }
 
-    /* ACCORDÉONS */
-    [data-testid="stExpander"] summary {
-        background-color: #1E293B !important;
-        border-radius: 10px !important;
-        border: 1px solid #334155 !important;
-        padding: 12px !important;
-    }
-    [data-testid="stExpander"] summary * {
-        color: #FFFFFF !important;
-        font-weight: 800 !important;
-        font-size: 15px !important;
-    }
-
-    /* BOUTONS GENERAUX TACTILES */
+    /* BOUTONS GENERAUX */
     div.stButton > button {
         background-color: #0284C7 !important;
         color: #FFFFFF !important;
@@ -214,7 +225,6 @@ st.markdown("""
         border-radius: 10px !important;
         border: none !important;
         min-height: 48px !important;
-        padding: 10px 14px !important;
         width: 100% !important;
     }
     div.stButton > button * {
@@ -330,31 +340,6 @@ st.markdown("""
         font-size: 12px !important;
         font-weight: 800 !important;
         margin: 2px 3px 2px 0 !important;
-    }
-
-    /* ONGLETS RECALIBRÉS POUR MOBILE (50% / 50%) */
-    .stTabs [data-baseweb="tab-list"] {
-        display: flex !important;
-        width: 100% !important;
-        gap: 4px !important;
-    }
-    .stTabs [data-baseweb="tab"] {
-        flex: 1 1 50% !important;
-        height: 46px !important;
-        background-color: #1E293B !important;
-        border-radius: 8px 8px 0px 0px !important;
-        color: #FFFFFF !important;
-        font-weight: 800 !important;
-        font-size: 13px !important;
-        border: 1px solid #334155 !important;
-        padding: 6px 8px !important;
-        text-align: center !important;
-        justify-content: center !important;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #0F172A !important;
-        color: #38BDF8 !important;
-        border-top: 3px solid #38BDF8 !important;
     }
     hr {
         border-color: #334155 !important;
@@ -695,10 +680,11 @@ config = charger_config()
 if "liste_consommations" not in st.session_state:
     st.session_state.liste_consommations = []
 
+# ONGLETS VISIBLES ET BIEN DÉFINIS
 tab_saisie, tab_admin = st.tabs(["📲 Saisie Terrain", "📊 Supervision & Rapports"])
 
 # -------------------------------------------------------------
-# ONGLET 1 : SAISIE TERRAIN ULTRA FLUIDE & TACTILE
+# ONGLET 1 : SAISIE TERRAIN ULTRA ERGONOMIQUE
 # -------------------------------------------------------------
 with tab_saisie:
     st.markdown("""
@@ -716,7 +702,7 @@ with tab_saisie:
     """, unsafe_allow_html=True)
 
     st.markdown("### 📍 Localisation & Tâche")
-    # Disposition verticale souple sur smartphone
+    # Date + Champs en disposition verticale propre
     date_jour = st.date_input("Date des travaux", value=date.today())
     chantier_sel = st.selectbox("Projet / Chantier", config["chantiers"])
     tache_sel = st.selectbox("Corps d'état / Ouvrage", config["taches"])
@@ -964,7 +950,6 @@ with tab_admin:
         for root, _, files in os.walk(PHOTOS_BASE_DIR):
             total_photos += len([f for f in files if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
 
-        # KPIs COMPACTS POUR MOBILE
         k1, k2, k3 = st.columns(3)
         with k1:
             st.metric("Rapports", f"{len(df_all) if df_all is not None else 0}")
@@ -1094,4 +1079,3 @@ with tab_admin:
 
     elif pin != "":
         st.error("❌ Code d'accès non autorisé.")
-        
