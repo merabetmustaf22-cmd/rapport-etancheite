@@ -18,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS COMPLET SPÉCIAL SMARTPHONE & INVERSION DES CASES ---
+# --- CSS SPÉCIAL CLAVIER VIRTUEL FLUIDE (ANTI-ZOOM & ANTI-DÉCALAGE) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -26,21 +26,24 @@ st.markdown("""
     html, body, [class*="css"] {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation; /* Supprime le délai de double-tap */
     }
 
     .stApp {
         background-color: #0B1120 !important;
         overflow-x: hidden !important;
     }
+
+    /* Marge basse importante pour que le clavier ne cache jamais le formulaire */
     .block-container {
-        padding-top: 1rem !important;
-        padding-bottom: 2.5rem !important;
+        padding-top: 0.8rem !important;
+        padding-bottom: 20rem !important; /* Laisse monter l'écran librement */
         padding-left: 0.8rem !important;
         padding-right: 0.8rem !important;
         max-width: 100% !important;
     }
 
-    /* TITRES ET TEXTES SUR FOND NOIR */
+    /* TITRES ET LABELS */
     .stMarkdown, .stMarkdown p, .stCaption, .stCaption p, [data-testid="stMarkdownContainer"] p {
         color: #FFFFFF !important;
     }
@@ -48,18 +51,18 @@ st.markdown("""
         color: #FFFFFF !important;
         font-weight: 800 !important;
         word-break: normal !important;
-        hyphens: none !important;
     }
     .stWidgetLabel p, [data-testid="stWidgetLabel"] p, label p {
         color: #FFFFFF !important;
         font-size: 15px !important;
         font-weight: 700 !important;
-        margin-bottom: 5px !important;
+        margin-bottom: 4px !important;
     }
 
     /* ========================================================= */
-    /* TOUTES LES CASES : FOND BLANC PUR + TEXTE NOIR NET       */
+    /* CASES DE SAISIE : POLICE STRICTE 16PX (ANTI-ZOOM CLAVIER) */
     /* ========================================================= */
+    input, textarea, 
     div[data-testid="stDateInput"] div[data-baseweb="input"],
     div[data-testid="stDateInput"] input,
     div[data-testid="stTextInput"] div[data-baseweb="input"],
@@ -74,9 +77,10 @@ st.markdown("""
         -webkit-text-fill-color: #0F172A !important;
         border: 2px solid #CBD5E1 !important;
         border-radius: 10px !important;
-        font-size: 16px !important;
-        font-weight: 800 !important;
+        font-size: 16px !important; /* EMPÊCHE CHROME DE FORCER UN ZOOM */
+        font-weight: 700 !important;
         min-height: 48px !important;
+        transform: translateZ(0); /* Accélération matérielle */
     }
 
     div[data-testid="stDateInput"] input {
@@ -84,9 +88,9 @@ st.markdown("""
         -webkit-text-fill-color: #0F172A !important;
         font-size: 16px !important;
         font-weight: 800 !important;
-        padding-left: 14px !important;
     }
 
+    /* Sélecteurs déroulants */
     .stSelectbox div[data-baseweb="select"] {
         background-color: #FFFFFF !important;
         border: 2px solid #CBD5E1 !important;
@@ -111,7 +115,7 @@ st.markdown("""
         font-weight: 700 !important;
     }
 
-    /* MENUS DÉROULANTS */
+    /* Menus déroulants */
     div[data-baseweb="popover"], ul[role="listbox"], li[role="option"] {
         background-color: #FFFFFF !important;
     }
@@ -122,21 +126,7 @@ st.markdown("""
         font-size: 15px !important;
     }
 
-    /* CALENDRIER DE SÉLECTION */
-    div[data-baseweb="calendar"], div[data-baseweb="calendar"] * {
-        color: #0F172A !important;
-        -webkit-text-fill-color: #0F172A !important;
-        font-weight: 700 !important;
-    }
-    div[data-baseweb="calendar"] button[aria-selected="true"] {
-        background-color: #0F766E !important;
-        color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
-    }
-
-    /* ========================================================= */
-    /* LES ONGLETS (TABS) EN HAUT : NETS ET TRÈS VISIBLES        */
-    /* ========================================================= */
+    /* ONGLETS DU HAUT */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px !important;
         margin-bottom: 12px !important;
@@ -145,13 +135,13 @@ st.markdown("""
         background-color: #1E293B !important;
         border-radius: 8px 8px 0px 0px !important;
         border: 1px solid #334155 !important;
-        padding: 10px 16px !important;
-        height: 48px !important;
+        padding: 8px 14px !important;
+        height: 46px !important;
     }
     .stTabs [data-baseweb="tab"] p {
         color: #FFFFFF !important;
         font-weight: 800 !important;
-        font-size: 14px !important;
+        font-size: 13px !important;
     }
     .stTabs [aria-selected="true"] {
         background-color: #0F172A !important;
@@ -172,7 +162,6 @@ st.markdown("""
     }
     .header-title {
         font-size: 18px !important;
-        line-height: 1.3 !important;
         font-weight: 900 !important;
         margin: 0 !important;
         color: #FFFFFF !important;
@@ -191,10 +180,9 @@ st.markdown("""
         border-radius: 6px;
         font-size: 11px;
         font-weight: 800;
-        white-space: nowrap !important;
     }
 
-    /* UPLOADER PHOTOS */
+    /* SÉLECTION FICHIER */
     [data-testid="stFileUploader"] section {
         background-color: #FFFFFF !important;
         border: 2px dashed #94A3B8 !important;
@@ -216,7 +204,7 @@ st.markdown("""
         font-weight: 700 !important;
     }
 
-    /* BOUTONS GENERAUX */
+    /* BOUTONS */
     div.stButton > button {
         background-color: #0284C7 !important;
         color: #FFFFFF !important;
@@ -680,7 +668,6 @@ config = charger_config()
 if "liste_consommations" not in st.session_state:
     st.session_state.liste_consommations = []
 
-# ONGLETS VISIBLES ET BIEN DÉFINIS
 tab_saisie, tab_admin = st.tabs(["📲 Saisie Terrain", "📊 Supervision & Rapports"])
 
 # -------------------------------------------------------------
@@ -702,7 +689,6 @@ with tab_saisie:
     """, unsafe_allow_html=True)
 
     st.markdown("### 📍 Localisation & Tâche")
-    # Date + Champs en disposition verticale propre
     date_jour = st.date_input("Date des travaux", value=date.today())
     chantier_sel = st.selectbox("Projet / Chantier", config["chantiers"])
     tache_sel = st.selectbox("Corps d'état / Ouvrage", config["taches"])
