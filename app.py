@@ -18,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS HAUTE LUMINOSITÉ SANS AUCUN TEXTE GRIS ---
+# --- CSS RADICAL CONTRE LE GRIS (100% BLANC & CYAN) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -32,20 +32,19 @@ st.markdown("""
         background-color: #0B1120 !important;
     }
 
-    /* TOUS LES TITRES EN BLANC PUR ÉCLATANT */
-    h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5 {
+    /* FORÇAGE BLANC PUR SUR TOUT TEXTE STREAMLIT */
+    .stMarkdown, .stMarkdown p, .stCaption, .stCaption p, span, label, p {
+        color: #FFFFFF !important;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
         color: #FFFFFF !important;
         font-weight: 800 !important;
         word-break: normal !important;
         hyphens: none !important;
     }
 
-    /* TEXTES GÉNÉRAUX EN BLANC PUR (PLUS DE GRIS) */
-    .stMarkdown p, .stCaption p, [data-testid="stMarkdownContainer"] p {
-        color: #FFFFFF !important;
-    }
-
-    /* EN-TÊTE SMARTPHONE SANS MOT COUPÉ */
+    /* EN-TÊTE SMARTPHONE */
     .header-cadre {
         background-color: #0F172A;
         border-radius: 14px;
@@ -60,15 +59,12 @@ st.markdown("""
         font-weight: 900 !important;
         margin: 0 !important;
         color: #FFFFFF !important;
-        word-break: normal !important;
-        hyphens: none !important;
     }
     .header-sub {
         font-size: 13px !important;
         color: #38BDF8 !important;
         margin-top: 5px !important;
         font-weight: 700 !important;
-        line-height: 1.3 !important;
     }
     .badge-pro {
         background: rgba(13, 148, 136, 0.3);
@@ -81,14 +77,14 @@ st.markdown("""
         white-space: nowrap !important;
     }
 
-    /* LABELS DES FORMULAIRES */
+    /* LABELS FORMULAIRES */
     .stWidgetLabel p, [data-testid="stWidgetLabel"] p, label p {
         color: #FFFFFF !important;
         font-size: 15px !important;
         font-weight: 700 !important;
     }
 
-    /* CASES DE SAISIE EN FOND BLANC ET TEXTE SOMBRE */
+    /* INPUTS EN BLANC ET TEXTE NOIR */
     .stTextInput input, .stDateInput input, .stNumberInput input {
         background-color: #FFFFFF !important;
         color: #0F172A !important;
@@ -96,10 +92,6 @@ st.markdown("""
         font-weight: 700 !important;
         border: 2px solid #CBD5E1 !important;
         border-radius: 8px !important;
-    }
-    .stTextInput input::placeholder {
-        color: #64748B !important;
-        font-weight: 500 !important;
     }
     .stSelectbox div[data-baseweb="select"] {
         background-color: #FFFFFF !important;
@@ -140,7 +132,7 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* SÉLECTEUR DE PHOTOS */
+    /* FILE UPLOADER */
     [data-testid="stFileUploader"] section {
         background-color: #FFFFFF !important;
         border: 2px dashed #94A3B8 !important;
@@ -160,7 +152,7 @@ st.markdown("""
         font-weight: 700 !important;
     }
 
-    /* VOLETS DÉPLIANTS (EXPANDERS) EN BLANC BRILLANT */
+    /* VOLETS DÉPLIANTS */
     [data-testid="stExpander"] summary {
         background-color: #1E293B !important;
         border-radius: 8px !important;
@@ -192,7 +184,6 @@ st.markdown("""
         border-radius: 10px !important;
         border: none !important;
         padding: 12px 16px !important;
-        box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3) !important;
     }
     div.stButton > button * {
         color: #FFFFFF !important;
@@ -216,7 +207,6 @@ st.markdown("""
         border: none !important;
         padding: 16px !important;
         width: 100% !important;
-        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4) !important;
     }
 
     /* BOUTONS DE TÉLÉCHARGEMENT */
@@ -228,67 +218,84 @@ st.markdown("""
         border-radius: 10px !important;
         border: 2px solid #CBD5E1 !important;
         padding: 10px 16px !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
     }
     div.stDownloadButton > button * {
         color: #0F172A !important;
         font-weight: 800 !important;
     }
 
-    /* CARTES DES RAPPORTS ET ATTACHEMENTS */
+    /* CARTES DES INTERVENTIONS ET TEXTES ULTRA LISIBLES */
     .card-intervention {
-        background-color: #111827;
-        border-radius: 14px;
-        border: 1px solid #334155;
-        padding: 16px;
-        margin-bottom: 16px;
-        border-left: 5px solid #10B981;
+        background-color: #111827 !important;
+        border-radius: 14px !important;
+        border: 1px solid #334155 !important;
+        padding: 16px !important;
+        margin-bottom: 16px !important;
+        border-left: 5px solid #10B981 !important;
     }
+    .card-text-white {
+        color: #FFFFFF !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        margin: 6px 0 !important;
+    }
+    .card-text-cyan {
+        color: #38BDF8 !important;
+        font-size: 13px !important;
+        font-weight: 700 !important;
+    }
+    .card-text-note {
+        color: #F8FAFC !important;
+        font-size: 14px !important;
+        font-style: italic !important;
+        margin-top: 6px !important;
+    }
+
     .tag-projet {
-        font-size: 16px;
-        font-weight: 900;
+        font-size: 16px !important;
+        font-weight: 900 !important;
         color: #FFFFFF !important;
     }
     .tag-date {
-        font-size: 12px;
-        font-weight: 700;
+        font-size: 13px !important;
+        font-weight: 700 !important;
         color: #FFFFFF !important;
-        background: #1E293B;
-        padding: 3px 8px;
-        border-radius: 6px;
-        border: 1px solid #475569;
+        background: #1E293B !important;
+        padding: 4px 10px !important;
+        border-radius: 6px !important;
+        border: 1px solid #475569 !important;
     }
     .tag-corps {
-        display: inline-block;
-        background-color: #1E293B;
+        display: inline-block !important;
+        background-color: #1E293B !important;
         color: #FFFFFF !important;
-        border: 1px solid #475569;
-        padding: 4px 10px;
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 800;
+        border: 1px solid #475569 !important;
+        padding: 4px 10px !important;
+        border-radius: 6px !important;
+        font-size: 13px !important;
+        font-weight: 800 !important;
     }
     .tag-rendement {
-        display: inline-block;
-        background-color: #064E3B;
+        display: inline-block !important;
+        background-color: #064E3B !important;
         color: #6EE7B7 !important;
-        border: 1px solid #059669;
-        padding: 4px 10px;
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 900;
-        margin-left: 6px;
+        border: 1px solid #059669 !important;
+        padding: 4px 10px !important;
+        border-radius: 6px !important;
+        font-size: 13px !important;
+        font-weight: 900 !important;
+        margin-left: 6px !important;
     }
     .tag-materiau {
-        display: inline-block;
-        background-color: #082F49;
+        display: inline-block !important;
+        background-color: #082F49 !important;
         color: #7DD3FC !important;
-        border: 1px solid #0284C7;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-size: 12px;
-        font-weight: 800;
-        margin: 3px 4px 3px 0;
+        border: 1px solid #0284C7 !important;
+        padding: 4px 8px !important;
+        border-radius: 6px !important;
+        font-size: 12px !important;
+        font-weight: 800 !important;
+        margin: 3px 4px 3px 0 !important;
     }
 
     /* ONGLETS */
@@ -418,7 +425,6 @@ def sauvegarder_donnees(df_to_save):
     except Exception:
         return False
 
-# --- FONCTION DE WATERMARKING TECHNIQUE OFFICIEL SUR PHOTOS ---
 def appliquer_watermark(image_file, chantier, tache, phase, date_str):
     try:
         img = Image.open(image_file).convert("RGB")
@@ -453,7 +459,6 @@ def appliquer_watermark(image_file, chantier, tache, phase, date_str):
         img_finale.save(out_bytes, format="JPEG", quality=90)
         return out_bytes.getvalue()
     except Exception:
-        # En cas d'imprévu, sauvegarde sécurisée de la photo originale
         return image_file.getbuffer()
 
 def generer_rapport_excel(df_source):
@@ -559,7 +564,7 @@ if "liste_consommations" not in st.session_state:
 tab_saisie, tab_admin = st.tabs(["📲 Saisie Terrain", "📊 Espace Encadrement & Rapports"])
 
 # -------------------------------------------------------------
-# ONGLET 1 : SAISIE TERRAIN HAUTE LISIBILITÉ
+# ONGLET 1 : SAISIE TERRAIN
 # -------------------------------------------------------------
 with tab_saisie:
     st.markdown("""
@@ -672,7 +677,6 @@ with tab_saisie:
                     nom_fichier = f"{tache_clean}_{idx+1}{ext}"
                     chemin_disque = os.path.join(chemin_cible, nom_fichier)
 
-                    # APPLICATION AUTOMATIQUE DU WATERMARK TECHNIQUE
                     photo_bytes = appliquer_watermark(p, chantier_sel, tache_sel, phase_travaux, str(date_jour))
                     with open(chemin_disque, "wb") as f_img:
                         f_img.write(photo_bytes)
@@ -713,7 +717,7 @@ with tab_saisie:
                 st.error(f"❌ Erreur de transmission : {e}")
 
 # -------------------------------------------------------------
-# ONGLET 2 : ESPACE CADRE, DIRECTION & GESTION
+# ONGLET 2 : ESPACE CADRE & DIRECTION
 # -------------------------------------------------------------
 with tab_admin:
     st.markdown("""
@@ -867,8 +871,9 @@ with tab_admin:
                 st.button("Export Excel (En attente de données)", disabled=True, use_container_width=True)
 
         with c_exp2:
+            # DESCRIPTION EXCEL VISIBLE EN BLANC PUR
             st.markdown("""
-                <div style='color: #FFFFFF !important; font-size: 14px; font-weight: 600; line-height: 1.5; padding-top: 5px;'>
+                <div style='color: #FFFFFF !important; font-size: 14px; font-weight: 600; line-height: 1.5; padding-top: 6px;'>
                     Le classeur inclut : Synthèse des surfaces, ratios de consommation, pointage des équipes et journal brut d'exécution.
                 </div>
             """, unsafe_allow_html=True)
@@ -894,10 +899,11 @@ with tab_admin:
 
                     c_info, c_btn = st.columns([3, 1])
                     with c_info:
+                        # NOMS DE CHANTIERS ET BADGES EN BLANC PUR ET BLEU ÉCLATANT
                         st.markdown(f"""
-                            <div style='margin-top: 8px;'>
+                            <div style='display: flex; align-items: center; margin-top: 8px;'>
                                 <span style='color: #FFFFFF !important; font-size: 16px; font-weight: 800;'>📁 {d_ch}</span>
-                                <span style='background-color: #1E293B; color: #38BDF8 !important; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: 700; margin-left: 8px; border: 1px solid #334155;'>
+                                <span style='background-color: #1E293B !important; color: #38BDF8 !important; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: 700; margin-left: 10px; border: 1px solid #334155;'>
                                     {len(fichiers_total)} photos classées
                                 </span>
                             </div>
@@ -906,6 +912,7 @@ with tab_admin:
                         st.download_button(label=f"Télécharger ZIP", data=zip_buf.getvalue(), file_name=f"Photos_{d_ch}.zip", mime="application/zip", key=f"z_{d_ch}", use_container_width=True)
 
         st.write("---")
+        # --- REGISTRE D'ATTACHEMENT (ZÉRO GRIS) ---
         if df_all is not None and not df_all.empty and "Chantier" in df_all.columns:
             st.markdown("### 🔍 Registre d'Attachement & Suivi des Ouvrages")
             chantiers_bruts = [c for c in df_all["Chantier"].dropna().unique() if not str(c).startswith("2026-") and str(c).strip()]
@@ -921,7 +928,7 @@ with tab_admin:
 
                 conso_val = str(row.get("Consommation", "")).strip()
                 if not conso_val or conso_val == "nan" or conso_val == "Aucun":
-                    badge_conso_html = "<span style='color: #38BDF8 !important; font-size: 13px; font-weight: 600;'>📦 Aucune consommation déclarée</span>"
+                    badge_conso_html = "<span style='color: #38BDF8 !important; font-size: 13px; font-weight: 700;'>📦 Aucune consommation déclarée</span>"
                 else:
                     items_conso = conso_val.split(" | ")
                     badge_conso_html = "".join([f"<span class='tag-materiau'>🧪 {c}</span>" for c in items_conso])
@@ -935,16 +942,16 @@ with tab_admin:
                         <div style='margin-bottom: 10px;'>
                             <span class='tag-corps'>🛠️ {row.get("Corps_d_etat", "")}</span>
                             <span class='tag-rendement'>📏 {row.get("Rendement", "")} {row.get("Unite", "")}</span>
-                            <span style='margin-left: 10px; color: #38BDF8 !important; font-size: 13px; font-weight: 700;'>Phase : {row.get("Phase", "")}</span>
+                            <span class='card-text-cyan' style='margin-left: 10px;'>Phase : {row.get("Phase", "")}</span>
                         </div>
                         <div style='margin: 10px 0;'>
                             {badge_conso_html}
                         </div>
-                        <div style='color: #FFFFFF !important; font-size: 14px; font-weight: 700; margin-top: 8px;'>
-                            👷 <b>Effectif présent :</b> {row.get("Effectif", "")}
+                        <div class='card-text-white'>
+                            👷 <span style='color: #38BDF8 !important; font-weight: 800;'>Effectif présent :</span> {row.get("Effectif", "")}
                         </div>
-                        <div style='color: #FFFFFF !important; font-size: 14px; margin-top: 6px; font-style: italic;'>
-                            💬 <b>Note de chantier :</b> {row.get("Legende", "R.A.S")}
+                        <div class='card-text-note'>
+                            💬 <span style='color: #5EEAD4 !important; font-weight: 800;'>Note de chantier :</span> {row.get("Legende", "R.A.S")}
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
@@ -987,3 +994,4 @@ with tab_admin:
 
     elif pin != "":
         st.error("❌ Code d'accès non autorisé.")
+    
