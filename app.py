@@ -197,7 +197,7 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* CADRE PHOTO OPTIMISÉ POUR ANDROID (OUVERTURE DIRECTE GALERIE) */
+    /* CADRE PHOTO UPLOAD */
     [data-testid="stFileUploader"] {
         position: relative !important;
     }
@@ -235,14 +235,14 @@ st.markdown("""
         cursor: pointer !important;
     }
 
-    /* BOÎTE D'APERÇU PHOTO PRISE */
-    .cadre-photo-preview {
+    /* CARTES D'APERÇU PHOTOS D'UPLOAD */
+    .photo-preview-card {
         background: #1E293B;
-        border: 2px solid #38BDF8;
-        border-radius: 12px;
-        padding: 12px;
-        margin-top: 10px;
+        border: 1px solid #334155;
+        border-radius: 10px;
+        padding: 8px;
         text-align: center;
+        margin-bottom: 12px;
     }
 
     [data-testid="stMetricValue"] {
@@ -277,13 +277,6 @@ st.markdown("""
         padding: 8px 12px !important;
         font-size: 13px !important;
         font-weight: 800 !important;
-    }
-
-    .btn-valider-photo button {
-        background: linear-gradient(135deg, #059669 0%, #10B981 100%) !important;
-        color: #FFFFFF !important;
-        font-weight: 800 !important;
-        border: none !important;
     }
 
     .btn-enregistrer-modif button {
@@ -620,12 +613,8 @@ def generer_rapport_excel(df_source):
 
 config = charger_config()
 
-# INITIALISATION DES SESSIONS
 if "liste_consommations" not in st.session_state:
     st.session_state.liste_consommations = []
-
-if "photos_validees" not in st.session_state:
-    st.session_state.photos_validees = []
 
 tab_saisie, tab_admin = st.tabs(["📲 Saisie Terrain", "📊 Espace Encadrement & Rapports"])
 
@@ -711,56 +700,49 @@ with tab_saisie:
     st.write("---")
     st.markdown("### 📸 Pièces Jointes & Justificatifs")
     
-    # ---------------------------------------------------------
-    # 📸 SECTION 1 : PRISE DE PHOTO INSTANTANÉE AVEC VALIDATION / SUPPRESSION
-    # ---------------------------------------------------------
-    st.markdown("##### 📷 1. Prendre une photo en direct sur le chantier :")
-    photo_cam = st.camera_input("Prendre une photo", label_visibility="collapsed")
+    # GESTION PROPRE DES PHOTOS TÉLÉVERSÉES DANS SESSION_STATE
+    if "uploaded_photos_list" not in st.session_state:
+        st.session_state.uploaded_photos_list = []
 
-    if photo_cam is not None:
-        st.markdown("<div class='cadre-photo-preview'>", unsafe_allow_html=True)
-        st.markdown("<p style='color:#38BDF8; font-weight:800; margin-bottom:8px;'>🔎 Aperçu de la photo capturée :</p>", unsafe_allow_html=True)
-        st.image(photo_cam, use_container_width=True)
-
-        c_v1, c_v2 = st.columns(2)
-        with c_v1:
-            st.markdown('<div class="btn-valider-photo">', unsafe_allow_html=True)
-            if st.button("✅ Uploader cette photo", key="btn_confirm_photo", use_container_width=True):
-                # Ajouter aux photos validées
-                st.session_state.photos_validees.append(photo_cam.getvalue())
-                st.success("Photo validée et ajoutée au rapport !")
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-            
-        with c_v2:
-            st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
-            if st.button("🗑️ Supprimer / Reprendre", key="btn_cancel_photo", use_container_width=True):
-                st.info("Photo supprimée.")
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # AFFICHAGE DE TOUTES LES PHOTOS VALIDÉES POUR CE RAPPORT
-    if st.session_state.photos_validees:
-        st.write("")
-        st.markdown(f"**📌 Photos enregistrées pour l'envoi ({len(st.session_state.photos_validees)}) :**")
-        p_cols = st.columns(min(len(st.session_state.photos_validees), 3))
-        for p_i, p_bytes in enumerate(st.session_state.photos_validees):
-            col_target = p_cols[p_i % 3]
-            col_target.image(p_bytes, use_container_width=True)
-            if col_target.button("❌ Enlever", key=f"del_val_photo_{p_i}", use_container_width=True):
-                st.session_state.photos_validees.pop(p_i)
-                st.rerun()
-
-    # ---------------------------------------------------------
-    # 📁 SECTION 2 : OUVERTURE DE LA GALERIE (SÉLECTION MULTIPLE)
-    # ---------------------------------------------------------
-    st.write("")
-    st.markdown("##### 📁 2. Ou importer directement depuis la Galerie :")
-    photos_galerie = st.file_uploader(
-        "Toucher ici pour choisir depuis vos albums",
-        accept_multiple_files=True
+    st.markdown("<p style='color:#FFFFFF; font-weight:700; margin-bottom:6px;'>Sélectionner les photos de l'ouvrage :</p>", unsafe_allow_html=True)
+    nouvelles_photos = st.file_uploader(
+        "Toucher ici pour importer vos photos",
+        accept_multiple_files=True,
+        key="uploader_input"
     )
+
+    # Synchronisation des photos sélectionnées
+    if nouvelles_photos:
+        for p in nouvelles_photos:
+            deja_present = False
+            for existante in st.session_state.uploaded_photos_list:
+                if existante["name"] == p.name and existante["size"] == p.size:
+                    deja_present = True
+                    break
+            if not deja_present:
+                st.session_state.uploaded_photos_list.append({
+                    "name": p.name,
+                    "size": p.size,
+                    "data": p.getbuffer()
+                })
+
+    # APERÇU DIRECT DES PHOTOS AVEC OPTION DE SUPPRIMER
+    if st.session_state.uploaded_photos_list:
+        st.markdown(f"""
+            <div style='background: rgba(16, 185, 129, 0.15); border: 1px solid #10B981; border-radius: 8px; padding: 8px 12px; margin: 10px 0;'>
+                <span style='color: #6EE7B7; font-weight: 800; font-size: 14px;'>✅ {len(st.session_state.uploaded_photos_list)} photo(s) prête(s) pour l'envoi</span>
+            </div>
+        """, unsafe_allow_html=True)
+
+        cols_prev = st.columns(min(len(st.session_state.uploaded_photos_list), 3))
+        for p_idx, p_obj in enumerate(st.session_state.uploaded_photos_list):
+            c_target = cols_prev[p_idx % 3]
+            c_target.image(p_obj["data"], use_container_width=True)
+            st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
+            if c_target.button("🗑️ Enlever", key=f"del_up_photo_{p_idx}", use_container_width=True):
+                st.session_state.uploaded_photos_list.pop(p_idx)
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
 
     st.write("---")
     legende = st.text_input("Observations techniques particulières", placeholder="Ex : Support brossé et dépoussiéré avant couche primaire...")
@@ -771,24 +753,9 @@ with tab_saisie:
     st.markdown('</div>', unsafe_allow_html=True)
 
     if envoyer_btn:
-        # Rassemblement des photos de la caméra (validées) et des photos de la galerie
-        total_photos_a_sauver = []
-        
-        # Photos caméra validées
-        for p_bytes in st.session_state.photos_validees:
-            total_photos_a_sauver.append({"type": "bytes", "data": p_bytes, "ext": ".jpg"})
-            
-        # Photos galerie
-        if photos_galerie:
-            for p_gal in photos_galerie:
-                ext = ".jpg"
-                if hasattr(p_gal, "name") and os.path.splitext(p_gal.name)[1]:
-                    ext = os.path.splitext(p_gal.name)[1].lower()
-                total_photos_a_sauver.append({"type": "buffer", "data": p_gal.getbuffer(), "ext": ext})
-
         if not macons_presents:
             st.error("⚠️ Veuillez déclarer au moins un ouvrier pour cet ouvrage.")
-        elif not total_photos_a_sauver:
+        elif not st.session_state.uploaded_photos_list:
             st.error("⚠️ La conformité technique impose l'ajout d'au moins une photo justificative.")
         else:
             try:
@@ -801,15 +768,16 @@ with tab_saisie:
                 saved_files = []
                 tache_clean = re.sub(r'[^a-zA-Z0-9_-]', '_', tache_sel)[:12]
 
-                for idx, p_item in enumerate(total_photos_a_sauver):
-                    nom_fichier = f"{tache_clean}_{idx+1}{p_item['ext']}"
+                for idx, p_item in enumerate(st.session_state.uploaded_photos_list):
+                    ext = ".jpg"
+                    if "." in p_item["name"]:
+                        ext = os.path.splitext(p_item["name"])[1].lower()
+
+                    nom_fichier = f"{tache_clean}_{idx+1}{ext}"
                     chemin_disque = os.path.join(chemin_cible, nom_fichier)
 
                     with open(chemin_disque, "wb") as f_img:
-                        if p_item["type"] == "bytes":
-                            f_img.write(p_item["data"])
-                        else:
-                            f_img.write(p_item["data"])
+                        f_img.write(p_item["data"])
 
                     saved_files.append(f"{dossier_chantier}/{dossier_date}/{nom_fichier}")
 
@@ -840,9 +808,8 @@ with tab_saisie:
                 else:
                     df_entry.to_csv(CSV_FILE, sep=';', mode='a', header=False, index=False, encoding='utf-8-sig')
 
-                # Réinitialisation après succès
                 st.session_state.liste_consommations = []
-                st.session_state.photos_validees = []
+                st.session_state.uploaded_photos_list = []
                 st.balloons()
                 st.success(f"✅ Rapport validé et intégré au registre officiel : {dossier_chantier} [{dossier_date}]")
             except Exception as e:
