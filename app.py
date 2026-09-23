@@ -71,7 +71,7 @@ st.markdown("""
         hyphens: none !important;
     }
 
-    /* EN-TÊTE SMARTPHONE PRO ÉPURÉ (SANS BOUTON RAFRAÎCHIR) */
+    /* EN-TÊTE SMARTPHONE PRO ÉPURÉ */
     .header-cadre {
         background-color: #0F172A;
         border-radius: 14px;
@@ -368,12 +368,23 @@ st.markdown("""
     </style>
 
     <script>
+    // 1. Suppression active des badges Streamlit Cloud en bas
     function purgeStreamlitBadges() {
         const sel = '[data-testid="manage-app-button"], [data-testid="stStatusWidget"], [class*="viewerBadge"], [class*="manageApp"], a[href*="streamlit.io"]';
         const elements = window.parent.document.querySelectorAll(sel);
         elements.forEach(el => el.remove());
     }
-    setInterval(purgeStreamlitBadges, 800);
+    setInterval(purgeStreamlitBadges, 600);
+
+    // 2. FORCER L'OUVERTURE DIRECTE DE LA GALERIE PHOTO SUR ANDROID
+    function forceAndroidGallery() {
+        const fileInputs = window.parent.document.querySelectorAll('input[type="file"]');
+        fileInputs.forEach(input => {
+            // "image/*" indique à Android d'ouvrir immédiatement l'application Galerie / Photos
+            input.setAttribute('accept', 'image/*');
+        });
+    }
+    setInterval(forceAndroidGallery, 500);
     </script>
 """, unsafe_allow_html=True)
 
@@ -661,6 +672,7 @@ with tab_saisie:
 
     st.write("---")
     st.markdown("### 📸 Pièces Jointes & Justificatifs")
+    # L'uploader Streamlit calibré pour forcer la Galerie Photo sur mobile
     photos_galerie = st.file_uploader(
         "Photos justificatives de l'ouvrage (Sélection multiple)",
         type=["jpg", "jpeg", "png"],
