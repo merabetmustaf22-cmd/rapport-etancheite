@@ -18,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS COMPLET HAUTE VISIBILITÉ & FORÇAGE GALERIE DIRECTE MOBILE ---
+# --- CSS COMPLET HAUTE VISIBILITÉ & PLEIN ÉCRAN MOBILE ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -216,14 +216,13 @@ st.markdown("""
     [data-testid="stFileUploader"] section button {
         background-color: #0284C7 !important;
         border: none !important;
-        pointer-events: none !important; /* Le clic traverse vers l'input physique natif */
+        pointer-events: none !important;
     }
     [data-testid="stFileUploader"] section button * {
         color: #FFFFFF !important;
         font-weight: 800 !important;
     }
 
-    /* Le vrai input Android prend toute la boîte : clic physique immédiat -> Galerie */
     [data-testid="stFileUploader"] input[type="file"] {
         display: block !important;
         position: absolute !important;
@@ -234,6 +233,16 @@ st.markdown("""
         opacity: 0 !important;
         z-index: 9999 !important;
         cursor: pointer !important;
+    }
+
+    /* BOÎTE D'APERÇU PHOTO PRISE */
+    .cadre-photo-preview {
+        background: #1E293B;
+        border: 2px solid #38BDF8;
+        border-radius: 12px;
+        padding: 12px;
+        margin-top: 10px;
+        text-align: center;
     }
 
     [data-testid="stMetricValue"] {
@@ -268,6 +277,13 @@ st.markdown("""
         padding: 8px 12px !important;
         font-size: 13px !important;
         font-weight: 800 !important;
+    }
+
+    .btn-valider-photo button {
+        background: linear-gradient(135deg, #059669 0%, #10B981 100%) !important;
+        color: #FFFFFF !important;
+        font-weight: 800 !important;
+        border: none !important;
     }
 
     .btn-enregistrer-modif button {
@@ -388,7 +404,13 @@ st.markdown("""
     </style>
 
     <script>
-    // Force la cible Galerie en continu sur tous les inputs de l'application
+    function purgeStreamlitBadges() {
+        const sel = '[data-testid="manage-app-button"], [data-testid="stStatusWidget"], [class*="viewerBadge"], [class*="manageApp"], a[href*="streamlit.io"]';
+        const elements = window.parent.document.querySelectorAll(sel);
+        elements.forEach(el => el.remove());
+    }
+    setInterval(purgeStreamlitBadges, 600);
+
     function applyGalleryFix() {
         const doc = window.parent.document;
         const inputs = doc.querySelectorAll('input[type="file"]');
@@ -598,8 +620,12 @@ def generer_rapport_excel(df_source):
 
 config = charger_config()
 
+# INITIALISATION DES SESSIONS
 if "liste_consommations" not in st.session_state:
     st.session_state.liste_consommations = []
+
+if "photos_validees" not in st.session_state:
+    st.session_state.photos_validees = []
 
 tab_saisie, tab_admin = st.tabs(["📲 Saisie Terrain", "📊 Espace Encadrement & Rapports"])
 
@@ -685,14 +711,58 @@ with tab_saisie:
     st.write("---")
     st.markdown("### 📸 Pièces Jointes & Justificatifs")
     
-    st.markdown("<p style='color:#FFFFFF; font-weight:700; margin-bottom:6px;'>Toucher la case ci-dessous pour ouvrir la Galerie Photo :</p>", unsafe_allow_html=True)
+    # ---------------------------------------------------------
+    # 📸 SECTION 1 : PRISE DE PHOTO INSTANTANÉE AVEC VALIDATION / SUPPRESSION
+    # ---------------------------------------------------------
+    st.markdown("##### 📷 1. Prendre une photo en direct sur le chantier :")
+    photo_cam = st.camera_input("Prendre une photo", label_visibility="collapsed")
+
+    if photo_cam is not None:
+        st.markdown("<div class='cadre-photo-preview'>", unsafe_allow_html=True)
+        st.markdown("<p style='color:#38BDF8; font-weight:800; margin-bottom:8px;'>🔎 Aperçu de la photo capturée :</p>", unsafe_allow_html=True)
+        st.image(photo_cam, use_container_width=True)
+
+        c_v1, c_v2 = st.columns(2)
+        with c_v1:
+            st.markdown('<div class="btn-valider-photo">', unsafe_allow_html=True)
+            if st.button("✅ Uploader cette photo", key="btn_confirm_photo", use_container_width=True):
+                # Ajouter aux photos validées
+                st.session_state.photos_validees.append(photo_cam.getvalue())
+                st.success("Photo validée et ajoutée au rapport !")
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+        with c_v2:
+            st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
+            if st.button("🗑️ Supprimer / Reprendre", key="btn_cancel_photo", use_container_width=True):
+                st.info("Photo supprimée.")
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # AFFICHAGE DE TOUTES LES PHOTOS VALIDÉES POUR CE RAPPORT
+    if st.session_state.photos_validees:
+        st.write("")
+        st.markdown(f"**📌 Photos enregistrées pour l'envoi ({len(st.session_state.photos_validees)}) :**")
+        p_cols = st.columns(min(len(st.session_state.photos_validees), 3))
+        for p_i, p_bytes in enumerate(st.session_state.photos_validees):
+            col_target = p_cols[p_i % 3]
+            col_target.image(p_bytes, use_container_width=True)
+            if col_target.button("❌ Enlever", key=f"del_val_photo_{p_i}", use_container_width=True):
+                st.session_state.photos_validees.pop(p_i)
+                st.rerun()
+
+    # ---------------------------------------------------------
+    # 📁 SECTION 2 : OUVERTURE DE LA GALERIE (SÉLECTION MULTIPLE)
+    # ---------------------------------------------------------
+    st.write("")
+    st.markdown("##### 📁 2. Ou importer directement depuis la Galerie :")
     photos_galerie = st.file_uploader(
-        "Sélectionnez les photos du chantier dans votre Galerie",
+        "Toucher ici pour choisir depuis vos albums",
         accept_multiple_files=True
     )
-    
-    photo_cam = st.camera_input("Ou prendre une photo instantanée sur le chantier")
 
+    st.write("---")
     legende = st.text_input("Observations techniques particulières", placeholder="Ex : Support brossé et dépoussiéré avant couche primaire...")
 
     st.write("")
@@ -701,15 +771,24 @@ with tab_saisie:
     st.markdown('</div>', unsafe_allow_html=True)
 
     if envoyer_btn:
-        liste_toutes_photos = []
+        # Rassemblement des photos de la caméra (validées) et des photos de la galerie
+        total_photos_a_sauver = []
+        
+        # Photos caméra validées
+        for p_bytes in st.session_state.photos_validees:
+            total_photos_a_sauver.append({"type": "bytes", "data": p_bytes, "ext": ".jpg"})
+            
+        # Photos galerie
         if photos_galerie:
-            liste_toutes_photos.extend(photos_galerie)
-        if photo_cam:
-            liste_toutes_photos.append(photo_cam)
+            for p_gal in photos_galerie:
+                ext = ".jpg"
+                if hasattr(p_gal, "name") and os.path.splitext(p_gal.name)[1]:
+                    ext = os.path.splitext(p_gal.name)[1].lower()
+                total_photos_a_sauver.append({"type": "buffer", "data": p_gal.getbuffer(), "ext": ext})
 
         if not macons_presents:
             st.error("⚠️ Veuillez déclarer au moins un ouvrier pour cet ouvrage.")
-        elif not liste_toutes_photos:
+        elif not total_photos_a_sauver:
             st.error("⚠️ La conformité technique impose l'ajout d'au moins une photo justificative.")
         else:
             try:
@@ -722,16 +801,15 @@ with tab_saisie:
                 saved_files = []
                 tache_clean = re.sub(r'[^a-zA-Z0-9_-]', '_', tache_sel)[:12]
 
-                for idx, p in enumerate(liste_toutes_photos):
-                    ext = ".jpg"
-                    if hasattr(p, "name") and os.path.splitext(p.name)[1]:
-                        ext = os.path.splitext(p.name)[1].lower()
-
-                    nom_fichier = f"{tache_clean}_{idx+1}{ext}"
+                for idx, p_item in enumerate(total_photos_a_sauver):
+                    nom_fichier = f"{tache_clean}_{idx+1}{p_item['ext']}"
                     chemin_disque = os.path.join(chemin_cible, nom_fichier)
 
                     with open(chemin_disque, "wb") as f_img:
-                        f_img.write(p.getbuffer())
+                        if p_item["type"] == "bytes":
+                            f_img.write(p_item["data"])
+                        else:
+                            f_img.write(p_item["data"])
 
                     saved_files.append(f"{dossier_chantier}/{dossier_date}/{nom_fichier}")
 
@@ -762,7 +840,9 @@ with tab_saisie:
                 else:
                     df_entry.to_csv(CSV_FILE, sep=';', mode='a', header=False, index=False, encoding='utf-8-sig')
 
+                # Réinitialisation après succès
                 st.session_state.liste_consommations = []
+                st.session_state.photos_validees = []
                 st.balloons()
                 st.success(f"✅ Rapport validé et intégré au registre officiel : {dossier_chantier} [{dossier_date}]")
             except Exception as e:
