@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 from datetime import date, datetime
 import os
@@ -18,7 +19,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS COMPLET HAUTE VISIBILITÉ & BOUTON ACTUALISER ---
+# --- CSS COMPLET HAUTE VISIBILITÉ ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -27,12 +28,10 @@ st.markdown("""
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
-    /* Fond général sombre */
     .stApp {
         background-color: #0B1120 !important;
     }
 
-    /* TITRES SANS COUPURE */
     h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5 {
         color: #FFFFFF !important;
         font-weight: 800 !important;
@@ -41,7 +40,6 @@ st.markdown("""
         hyphens: none !important;
     }
 
-    /* BOUTON ACTUALISER EN HAUT */
     .btn-refresh button {
         background: #1E293B !important;
         color: #38BDF8 !important;
@@ -58,7 +56,6 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* EN-TÊTE SMARTPHONE */
     .header-cadre {
         background-color: #0F172A;
         border-radius: 14px;
@@ -93,7 +90,6 @@ st.markdown("""
         white-space: nowrap !important;
     }
 
-    /* ÉCRAN DE VERROUILLAGE ADMIN */
     .lock-card {
         background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%);
         border: 1px solid #334155;
@@ -127,14 +123,12 @@ st.markdown("""
         margin: 0 0 16px 0;
     }
 
-    /* LABELS DES CHAMPS */
     .stWidgetLabel p, [data-testid="stWidgetLabel"] p, label p {
         color: #FFFFFF !important;
         font-size: 14px !important;
         font-weight: 700 !important;
     }
 
-    /* CASES DE FORMULAIRE (FOND BLANC + TEXTE NOIR) */
     .stTextInput input, .stDateInput input, .stNumberInput input {
         background-color: #FFFFFF !important;
         color: #0F172A !important;
@@ -163,7 +157,6 @@ st.markdown("""
         font-weight: 700 !important;
     }
 
-    /* MENUS DÉROULANTS (POPOVER) */
     div[data-baseweb="popover"], ul[role="listbox"], li[role="option"] {
         background-color: #FFFFFF !important;
     }
@@ -175,7 +168,6 @@ st.markdown("""
         background-color: #E2E8F0 !important;
     }
 
-    /* CALENDRIER DATEPICKER */
     div[data-baseweb="calendar"], div[data-baseweb="calendar"] * {
         color: #0F172A !important;
         font-weight: 700 !important;
@@ -185,7 +177,6 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* SÉLECTEUR DE PHOTOS */
     [data-testid="stFileUploader"] section {
         background-color: #FFFFFF !important;
         border: 2px dashed #94A3B8 !important;
@@ -205,7 +196,6 @@ st.markdown("""
         font-weight: 700 !important;
     }
 
-    /* CHIFFRES STATISTIQUES / KPI */
     [data-testid="stMetricValue"] {
         color: #FFFFFF !important;
         font-size: 32px !important;
@@ -217,7 +207,6 @@ st.markdown("""
         font-weight: 800 !important;
     }
 
-    /* BOUTONS D'ACTION */
     div.stButton > button {
         background-color: #0284C7 !important;
         color: #FFFFFF !important;
@@ -264,7 +253,6 @@ st.markdown("""
         box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4) !important;
     }
 
-    /* BOUTONS DE TÉLÉCHARGEMENT */
     div.stDownloadButton > button {
         background-color: #FFFFFF !important;
         color: #0F172A !important;
@@ -280,7 +268,6 @@ st.markdown("""
         font-weight: 800 !important;
     }
 
-    /* CARTES DES INTERVENTIONS */
     .card-intervention {
         background-color: #111827;
         border-radius: 14px;
@@ -336,7 +323,6 @@ st.markdown("""
         margin: 3px 4px 3px 0;
     }
 
-    /* ONGLETS */
     .stTabs [data-baseweb="tab-list"] {
         gap: 6px;
     }
@@ -563,12 +549,12 @@ config = charger_config()
 if "liste_consommations" not in st.session_state:
     st.session_state.liste_consommations = []
 
-# --- BOUTON D'ACTUALISATION EN HAUT ---
+# --- BOUTON D'ACTUALISATION FORCÉE (JAVASCRIPT HARD RELOAD) ---
 c_act1, c_act2 = st.columns([3, 1])
 with c_act2:
     st.markdown('<div class="btn-refresh">', unsafe_allow_html=True)
     if st.button("🔄 Actualiser l'application", use_container_width=True):
-        st.rerun()
+        components.html("<script>window.parent.location.reload(true);</script>", height=0, width=0)
     st.markdown('</div>', unsafe_allow_html=True)
 
 tab_saisie, tab_admin = st.tabs(["📲 Saisie Terrain", "📊 Espace Encadrement & Rapports"])
