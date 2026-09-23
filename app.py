@@ -18,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS COMPLET HAUTE VISIBILITÉ & LOCK SCREEN ADMIN ---
+# --- CSS COMPLET HAUTE VISIBILITÉ & BOUTON ACTUALISER ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -39,6 +39,23 @@ st.markdown("""
         word-break: normal !important;
         overflow-wrap: break-word !important;
         hyphens: none !important;
+    }
+
+    /* BOUTON ACTUALISER EN HAUT */
+    .btn-refresh button {
+        background: #1E293B !important;
+        color: #38BDF8 !important;
+        border: 1px solid #0284C7 !important;
+        border-radius: 8px !important;
+        font-weight: 800 !important;
+        font-size: 13px !important;
+        padding: 6px 14px !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
+        margin-bottom: 10px !important;
+    }
+    .btn-refresh button:hover {
+        background: #0284C7 !important;
+        color: #FFFFFF !important;
     }
 
     /* EN-TÊTE SMARTPHONE */
@@ -76,7 +93,7 @@ st.markdown("""
         white-space: nowrap !important;
     }
 
-    /* ÉCRAN DE VERROUILLAGE ADMIN (LOCK SCREEN) */
+    /* ÉCRAN DE VERROUILLAGE ADMIN */
     .lock-card {
         background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%);
         border: 1px solid #334155;
@@ -545,6 +562,14 @@ config = charger_config()
 
 if "liste_consommations" not in st.session_state:
     st.session_state.liste_consommations = []
+
+# --- BOUTON D'ACTUALISATION EN HAUT ---
+c_act1, c_act2 = st.columns([3, 1])
+with c_act2:
+    st.markdown('<div class="btn-refresh">', unsafe_allow_html=True)
+    if st.button("🔄 Actualiser l'application", use_container_width=True):
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
 tab_saisie, tab_admin = st.tabs(["📲 Saisie Terrain", "📊 Espace Encadrement & Rapports"])
 
