@@ -18,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS COMPLET HAUTE VISIBILITÉ & MASQUAGE DU HEADER / FOOTER STREAMLIT ---
+# --- CSS COMPLET HAUTE VISIBILITÉ & SUPPRESSION TOTALE DU BANDEAU ET DES BADGES BAS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -27,18 +27,39 @@ st.markdown("""
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
-    /* 1. SUPPRESSION TOTALE DE LA BARRE DU HAUT (FORK, GITHUB, MENU) ET DES WATERMARKS STREAMLIT */
-    #MainMenu {visibility: hidden !important;}
+    /* 1. SUPPRESSION TOTALE DE LA BARRE DU HAUT (FORK, GITHUB, MENU) */
+    #MainMenu {visibility: hidden !important; display: none !important;}
     header, [data-testid="stHeader"] {display: none !important;}
-    footer {visibility: hidden !important;}
+    footer {visibility: hidden !important; display: none !important;}
     .stDeployButton {display: none !important;}
-    div[class^="viewerBadge"] {display: none !important;}
-    [data-testid="stStatusWidget"] {display: none !important;}
+
+    /* 2. SUPPRESSION TOTALE DU LOGO ROUGE ET DE L'AVATAR EN BAS À DROITE */
+    [data-testid="manage-app-button"],
+    [data-testid="stStatusWidget"],
+    .viewerBadge_container__1QSob,
+    [class*="viewerBadge"],
+    [class*="manageApp"],
+    [class*="StatusWidget"],
+    [class*="ProfileButton"],
+    [class*="FloatingActionButton"],
+    button[aria-label*="Manage"],
+    a[href*="streamlit.io/cloud"],
+    a[href*="share.streamlit.io"],
+    div:has(> a[href*="streamlit.io"]),
+    div:has(> [data-testid="manage-app-button"]) {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        width: 0 !important;
+        height: 0 !important;
+    }
 
     /* Fond général sombre */
     .stApp {
         background-color: #0B1120 !important;
-        margin-top: -40px !important; /* Optimisation plein écran smartphone */
+        margin-top: -40px !important;
+        padding-bottom: 30px !important;
     }
 
     /* TITRES SANS COUPURE */
@@ -366,6 +387,16 @@ st.markdown("""
         margin: 18px 0 !important;
     }
     </style>
+
+    <script>
+    // Suppression active des éléments Streamlit Cloud en bas à droite
+    function purgeStreamlitBadges() {
+        const sel = '[data-testid="manage-app-button"], [data-testid="stStatusWidget"], [class*="viewerBadge"], [class*="manageApp"], a[href*="streamlit.io"]';
+        const elements = window.parent.document.querySelectorAll(sel);
+        elements.forEach(el => el.remove());
+    }
+    setInterval(purgeStreamlitBadges, 800);
+    </script>
 """, unsafe_allow_html=True)
 
 PHOTOS_BASE_DIR = "photos_chantier"
@@ -575,7 +606,6 @@ tab_saisie, tab_admin = st.tabs(["📲 Saisie Terrain", "📊 Espace Encadrement
 # ONGLET 1 : SAISIE TERRAIN (CALIBRÉE SMARTPHONE & PLEIN ÉCRAN)
 # -------------------------------------------------------------
 with tab_saisie:
-    # EN-TÊTE AVEC BOUTON D'ACTUALISATION DIRECT INTÉGRÉ
     st.markdown("""
         <div class='header-cadre'>
             <div style='display: flex; justify-content: space-between; align-items: center;'>
