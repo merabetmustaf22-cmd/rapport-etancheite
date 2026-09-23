@@ -18,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS COMPLET HAUTE VISIBILITÉ & SUPPRESSION TOTALE DU BANDEAU ET DES BADGES BAS ---
+# --- CSS COMPLET HAUTE VISIBILITÉ & PLEIN ÉCRAN MOBILE ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -27,13 +27,13 @@ st.markdown("""
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
-    /* 1. SUPPRESSION TOTALE DE LA BARRE DU HAUT (FORK, GITHUB, MENU) */
+    /* 1. SUPPRESSION TOTALE DE LA BARRE DU HAUT ET MENUS STREAMLIT */
     #MainMenu {visibility: hidden !important; display: none !important;}
     header, [data-testid="stHeader"] {display: none !important;}
     footer {visibility: hidden !important; display: none !important;}
     .stDeployButton {display: none !important;}
 
-    /* 2. SUPPRESSION TOTALE DU LOGO ROUGE ET DE L'AVATAR EN BAS À DROITE */
+    /* 2. SUPPRESSION TOTALE DES BADGES ET BOUTONS STREAMLIT EN BAS */
     [data-testid="manage-app-button"],
     [data-testid="stStatusWidget"],
     .viewerBadge_container__1QSob,
@@ -71,7 +71,7 @@ st.markdown("""
         hyphens: none !important;
     }
 
-    /* EN-TÊTE SMARTPHONE PRO AVEC BOUTON ACTUALISER INTÉGRÉ */
+    /* EN-TÊTE SMARTPHONE PRO ÉPURÉ (SANS BOUTON RAFRAÎCHIR) */
     .header-cadre {
         background-color: #0F172A;
         border-radius: 14px;
@@ -105,27 +105,6 @@ st.markdown("""
         font-weight: 800;
         white-space: nowrap !important;
         display: inline-block;
-    }
-
-    /* BOUTON ACTUALISER DANS L'EN-TÊTE */
-    .btn-header-refresh {
-        background: #1E293B;
-        border: 1px solid #0284C7;
-        color: #38BDF8 !important;
-        padding: 4px 10px;
-        border-radius: 6px;
-        font-size: 12px;
-        font-weight: 800;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        text-decoration: none;
-        margin-right: 6px;
-    }
-    .btn-header-refresh:active {
-        background: #0284C7;
-        color: #FFFFFF !important;
     }
 
     /* ÉCRAN DE VERROUILLAGE ADMIN */
@@ -389,7 +368,6 @@ st.markdown("""
     </style>
 
     <script>
-    // Suppression active des éléments Streamlit Cloud en bas à droite
     function purgeStreamlitBadges() {
         const sel = '[data-testid="manage-app-button"], [data-testid="stStatusWidget"], [class*="viewerBadge"], [class*="manageApp"], a[href*="streamlit.io"]';
         const elements = window.parent.document.querySelectorAll(sel);
@@ -613,10 +591,7 @@ with tab_saisie:
                     <h1 class='header-title'>Rapport Journalier d'Exécution</h1>
                     <div class='header-sub'>Étanchéité technique & Traitement des supports</div>
                 </div>
-                <div style='display: flex; align-items: center;'>
-                    <button class='btn-header-refresh' onclick='window.location.reload(true);' title='Actualiser'>
-                        🔄 Rafraîchir
-                    </button>
+                <div>
                     <span class='badge-pro'>PRO V1.0</span>
                 </div>
             </div>
@@ -794,10 +769,7 @@ with tab_admin:
                         <h1 class='header-title'>Tableau de Bord & Attachements</h1>
                         <div class='header-sub'>Supervision technique, synthèse des consommations et exports</div>
                     </div>
-                    <div style='display: flex; align-items: center;'>
-                        <button class='btn-header-refresh' onclick='window.location.reload(true);' title='Actualiser'>
-                            🔄 Rafraîchir
-                        </button>
+                    <div>
                         <span class='badge-pro'>SUPERVISION ACTIVE</span>
                     </div>
                 </div>
@@ -1132,7 +1104,7 @@ with tab_admin:
                         for c_idx, c_item in enumerate(st.session_state[state_key]):
                             c_col_txt, c_col_del = st.columns([4, 1])
                             with c_col_txt:
-                                st.markdown(f"<span class='tag-materiau'>📦 {c_item['produit']} : <b>{c_item['quantite']} {item['unite']}</b></span>", unsafe_allow_html=True)
+                                st.markdown(f"<span class='tag-materiau'>📦 {c_item['produit']} : <b>{c_item['quantite']} {c_item['unite']}</b></span>", unsafe_allow_html=True)
                             with c_col_del:
                                 st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
                                 if st.button("❌", key=f"del_mconso_{orig_idx}_{c_idx}"):
