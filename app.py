@@ -18,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS COMPLET HAUTE VISIBILITÉ & BOUTON FLOTTANT ---
+# --- CSS COMPLET HAUTE VISIBILITÉ & MASQUAGE DU HEADER / FOOTER STREAMLIT ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -27,36 +27,21 @@ st.markdown("""
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
+    /* 1. SUPPRESSION TOTALE DE LA BARRE DU HAUT (FORK, GITHUB, MENU) ET DES WATERMARKS STREAMLIT */
+    #MainMenu {visibility: hidden !important;}
+    header, [data-testid="stHeader"] {display: none !important;}
+    footer {visibility: hidden !important;}
+    .stDeployButton {display: none !important;}
+    div[class^="viewerBadge"] {display: none !important;}
+    [data-testid="stStatusWidget"] {display: none !important;}
+
+    /* Fond général sombre */
     .stApp {
         background-color: #0B1120 !important;
+        margin-top: -40px !important; /* Optimisation plein écran smartphone */
     }
 
-    /* BOUTON FLOTTANT EN BAS À DROITE */
-    .fab-refresh {
-        position: fixed;
-        bottom: 25px;
-        right: 20px;
-        width: 52px;
-        height: 52px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%);
-        border: 2px solid #38BDF8;
-        color: #FFFFFF !important;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-        cursor: pointer;
-        z-index: 9999999;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 24px;
-        text-decoration: none;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    .fab-refresh:active {
-        transform: scale(0.92);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    }
-
+    /* TITRES SANS COUPURE */
     h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5 {
         color: #FFFFFF !important;
         font-weight: 800 !important;
@@ -65,6 +50,7 @@ st.markdown("""
         hyphens: none !important;
     }
 
+    /* EN-TÊTE SMARTPHONE PRO AVEC BOUTON ACTUALISER INTÉGRÉ */
     .header-cadre {
         background-color: #0F172A;
         border-radius: 14px;
@@ -97,8 +83,31 @@ st.markdown("""
         font-size: 11px;
         font-weight: 800;
         white-space: nowrap !important;
+        display: inline-block;
     }
 
+    /* BOUTON ACTUALISER DANS L'EN-TÊTE */
+    .btn-header-refresh {
+        background: #1E293B;
+        border: 1px solid #0284C7;
+        color: #38BDF8 !important;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 800;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        text-decoration: none;
+        margin-right: 6px;
+    }
+    .btn-header-refresh:active {
+        background: #0284C7;
+        color: #FFFFFF !important;
+    }
+
+    /* ÉCRAN DE VERROUILLAGE ADMIN */
     .lock-card {
         background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%);
         border: 1px solid #334155;
@@ -132,12 +141,14 @@ st.markdown("""
         margin: 0 0 16px 0;
     }
 
+    /* LABELS DES CHAMPS */
     .stWidgetLabel p, [data-testid="stWidgetLabel"] p, label p {
         color: #FFFFFF !important;
         font-size: 14px !important;
         font-weight: 700 !important;
     }
 
+    /* CASES DE FORMULAIRE (FOND BLANC + TEXTE NOIR) */
     .stTextInput input, .stDateInput input, .stNumberInput input {
         background-color: #FFFFFF !important;
         color: #0F172A !important;
@@ -357,13 +368,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# INJECTION DU BOUTON FLOTTANT DIRECT AVEC HARD REFRESH JAVASCRIPT
-st.markdown("""
-    <div class="fab-refresh" onclick="window.location.reload(true);" title="Actualiser la page">
-        🔄
-    </div>
-""", unsafe_allow_html=True)
-
 PHOTOS_BASE_DIR = "photos_chantier"
 os.makedirs(PHOTOS_BASE_DIR, exist_ok=True)
 CONFIG_FILE = "config_chantier.json"
@@ -568,9 +572,10 @@ if "liste_consommations" not in st.session_state:
 tab_saisie, tab_admin = st.tabs(["📲 Saisie Terrain", "📊 Espace Encadrement & Rapports"])
 
 # -------------------------------------------------------------
-# ONGLET 1 : SAISIE TERRAIN (CALIBRÉE SMARTPHONE)
+# ONGLET 1 : SAISIE TERRAIN (CALIBRÉE SMARTPHONE & PLEIN ÉCRAN)
 # -------------------------------------------------------------
 with tab_saisie:
+    # EN-TÊTE AVEC BOUTON D'ACTUALISATION DIRECT INTÉGRÉ
     st.markdown("""
         <div class='header-cadre'>
             <div style='display: flex; justify-content: space-between; align-items: center;'>
@@ -578,7 +583,10 @@ with tab_saisie:
                     <h1 class='header-title'>Rapport Journalier d'Exécution</h1>
                     <div class='header-sub'>Étanchéité technique & Traitement des supports</div>
                 </div>
-                <div>
+                <div style='display: flex; align-items: center;'>
+                    <button class='btn-header-refresh' onclick='window.location.reload(true);' title='Actualiser'>
+                        🔄 Rafraîchir
+                    </button>
                     <span class='badge-pro'>PRO V1.0</span>
                 </div>
             </div>
@@ -756,7 +764,10 @@ with tab_admin:
                         <h1 class='header-title'>Tableau de Bord & Attachements</h1>
                         <div class='header-sub'>Supervision technique, synthèse des consommations et exports</div>
                     </div>
-                    <div>
+                    <div style='display: flex; align-items: center;'>
+                        <button class='btn-header-refresh' onclick='window.location.reload(true);' title='Actualiser'>
+                            🔄 Rafraîchir
+                        </button>
                         <span class='badge-pro'>SUPERVISION ACTIVE</span>
                     </div>
                 </div>
@@ -1091,7 +1102,7 @@ with tab_admin:
                         for c_idx, c_item in enumerate(st.session_state[state_key]):
                             c_col_txt, c_col_del = st.columns([4, 1])
                             with c_col_txt:
-                                st.markdown(f"<span class='tag-materiau'>📦 {c_item['produit']} : <b>{c_item['quantite']} {c_item['unite']}</b></span>", unsafe_allow_html=True)
+                                st.markdown(f"<span class='tag-materiau'>📦 {c_item['produit']} : <b>{c_item['quantite']} {item['unite']}</b></span>", unsafe_allow_html=True)
                             with c_col_del:
                                 st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
                                 if st.button("❌", key=f"del_mconso_{orig_idx}_{c_idx}"):
