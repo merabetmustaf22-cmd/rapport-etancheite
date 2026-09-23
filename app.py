@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import pandas as pd
 from datetime import date, datetime
 import os
@@ -19,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS COMPLET HAUTE VISIBILITÉ ---
+# --- CSS COMPLET HAUTE VISIBILITÉ & BOUTON FLOTTANT ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -32,28 +31,38 @@ st.markdown("""
         background-color: #0B1120 !important;
     }
 
+    /* BOUTON FLOTTANT EN BAS À DROITE */
+    .fab-refresh {
+        position: fixed;
+        bottom: 25px;
+        right: 20px;
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%);
+        border: 2px solid #38BDF8;
+        color: #FFFFFF !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+        cursor: pointer;
+        z-index: 9999999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        text-decoration: none;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .fab-refresh:active {
+        transform: scale(0.92);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
     h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5 {
         color: #FFFFFF !important;
         font-weight: 800 !important;
         word-break: normal !important;
         overflow-wrap: break-word !important;
         hyphens: none !important;
-    }
-
-    .btn-refresh button {
-        background: #1E293B !important;
-        color: #38BDF8 !important;
-        border: 1px solid #0284C7 !important;
-        border-radius: 8px !important;
-        font-weight: 800 !important;
-        font-size: 13px !important;
-        padding: 6px 14px !important;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
-        margin-bottom: 10px !important;
-    }
-    .btn-refresh button:hover {
-        background: #0284C7 !important;
-        color: #FFFFFF !important;
     }
 
     .header-cadre {
@@ -348,6 +357,13 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# INJECTION DU BOUTON FLOTTANT DIRECT AVEC HARD REFRESH JAVASCRIPT
+st.markdown("""
+    <div class="fab-refresh" onclick="window.location.reload(true);" title="Actualiser la page">
+        🔄
+    </div>
+""", unsafe_allow_html=True)
+
 PHOTOS_BASE_DIR = "photos_chantier"
 os.makedirs(PHOTOS_BASE_DIR, exist_ok=True)
 CONFIG_FILE = "config_chantier.json"
@@ -548,14 +564,6 @@ config = charger_config()
 
 if "liste_consommations" not in st.session_state:
     st.session_state.liste_consommations = []
-
-# --- BOUTON D'ACTUALISATION FORCÉE (JAVASCRIPT HARD RELOAD) ---
-c_act1, c_act2 = st.columns([3, 1])
-with c_act2:
-    st.markdown('<div class="btn-refresh">', unsafe_allow_html=True)
-    if st.button("🔄 Actualiser l'application", use_container_width=True):
-        components.html("<script>window.parent.location.reload(true);</script>", height=0, width=0)
-    st.markdown('</div>', unsafe_allow_html=True)
 
 tab_saisie, tab_admin = st.tabs(["📲 Saisie Terrain", "📊 Espace Encadrement & Rapports"])
 
