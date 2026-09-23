@@ -707,11 +707,9 @@ with tab_saisie:
 # ONGLET 2 : ESPACE CADRE, DIRECTION & ÉCRAN DE SÉCURITÉ
 # -------------------------------------------------------------
 with tab_admin:
-    # Initialisation de l'état d'authentification
     if "admin_logged_in" not in st.session_state:
         st.session_state.admin_logged_in = False
 
-    # SI L'ADMIN N'EST PAS ENCORE CONNECTÉ : ÉCRAN DE VERROUILLAGE PRO
     if not st.session_state.admin_logged_in:
         st.markdown("""
             <div class='lock-card'>
@@ -731,7 +729,6 @@ with tab_admin:
                 else:
                     st.error("❌ Code PIN incorrect. Accès refusé.")
 
-    # SI L'ADMIN EST CONNECTÉ : AFFICHAGE DU DASHBOARD COMPLET
     else:
         st.markdown("""
             <div class='header-cadre'>
@@ -747,7 +744,6 @@ with tab_admin:
             </div>
         """, unsafe_allow_html=True)
 
-        # Bouton de déconnexion rapide
         c_dec1, c_dec2 = st.columns([3, 1])
         with c_dec2:
             st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
@@ -864,7 +860,6 @@ with tab_admin:
         for root, _, files in os.walk(PHOTOS_BASE_DIR):
             total_photos += len([f for f in files if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
 
-        # Cartes KPI
         kpi1, kpi2, kpi3 = st.columns(3)
         with kpi1:
             st.metric("Rapports Validés", f"{len(df_all) if df_all is not None else 0}")
@@ -931,7 +926,7 @@ with tab_admin:
                         st.download_button(label=f"Télécharger ZIP", data=zip_buf.getvalue(), file_name=f"Photos_{d_ch}.zip", mime="application/zip", key=f"z_{d_ch}", use_container_width=True)
 
         st.write("---")
-        # REGISTRE D'ATTACHEMENT AVEC CORRECTION
+        # REGISTRE D'ATTACHEMENT AVEC SÉLECTION INTUITIVE POUR LES CORRECTIONS
         if df_all is not None and not df_all.empty and "Chantier" in df_all.columns:
             st.markdown("### 🔍 Registre d'Attachement & Suivi des Ouvrages")
             chantiers_bruts = [c for c in df_all["Chantier"].dropna().unique() if not str(c).startswith("2026-") and str(c).strip()]
@@ -996,10 +991,11 @@ with tab_admin:
                         except Exception:
                             pass
 
-                # CORRECTION PAR LE RESPONSABLE
+                # CORRECTION PAR SÉLECTION INTUITIVE (EFFECTIF MULTISELECT + MATÉRIAUX DYNAMIQUES)
                 with st.expander(f"✏️ Corriger / Modifier cette fiche ({row.get('Chantier','')} - {row.get('Date','')})"):
                     st.caption("Modifiez directement les erreurs commises par l'équipe sur le terrain :")
                     
+                    # 1. Date et Chantier
                     m_c1, m_c2 = st.columns(2)
                     with m_c1:
                         try:
@@ -1012,6 +1008,7 @@ with tab_admin:
                         idx_ch = config["chantiers"].index(ch_actuel) if ch_actuel in config["chantiers"] else 0
                         m_chantier = st.selectbox("Chantier", config["chantiers"], index=idx_ch, key=f"m_ch_{orig_idx}")
 
+                    # 2. Corps d'état et Phase
                     m_c3, m_c4 = st.columns(2)
                     with m_c3:
                         tache_actuelle = str(row.get("Corps_d_etat", ""))
@@ -1030,6 +1027,7 @@ with tab_admin:
                         idx_ph = phases_possibles.index(ph_actuelle) if ph_actuelle in phases_possibles else 0
                         m_phase = st.selectbox("Phase", phases_possibles, index=idx_ph, key=f"m_ph_{orig_idx}")
 
+                    # 3. Rendement et Unité
                     m_c5, m_c6 = st.columns(2)
                     with m_c5:
                         try:
@@ -1043,23 +1041,85 @@ with tab_admin:
                         idx_u = unites_possibles.index(u_actuelle) if u_actuelle in unites_possibles else 0
                         m_unite = st.selectbox("Unité", unites_possibles, index=idx_u, key=f"m_u_{orig_idx}")
 
-                    m_conso = st.text_input("Consommation Matériaux", value=str(row.get("Consommation", "")), key=f"m_conso_{orig_idx}")
-                    m_effectif = st.text_input("Effectif (séparé par des virgules)", value=str(row.get("Effectif", "")), key=f"m_eff_{orig_idx}")
+                    # 4. EFFECTIF PAR MULTISELECT DIRECT
+                    raw_eff = [e.strip() for e in str(row.get("Effectif", "")).split(",") if e.strip()]
+                    def_eff = [e for e in raw_eff if e in config["macons"]]
+                    m_effectif = st.multiselect("👷 Ouvriers présents", config["macons"], default=def_eff, key=f"m_eff_{orig_idx}")
+
+                    # 5. CONSOMMATION MATÉRIAUX GÉRÉE PAR SÉLECTION
+                    st.write("---")
+                    st.markdown("##### 🧪 Consommation Matériaux")
+                    
+                    state_key = f"m_conso_list_{orig_idx}"
+                    if state_key not in st.session_state:
+                        liste_init = []
+                        conso_str = str(row.get("Consommation", "")).strip()
+                        if conso_str and conso_str != "nan" and conso_str != "Aucun":
+                            for part in conso_str.split(" | "):
+                                if ":" in part:
+                                    p_nom, p_qte_uni = part.split(":", 1)
+                                    p_nom = p_nom.strip()
+                                    q_u = p_qte_uni.strip().split(" ", 1)
+                                    try:
+                                        q_val = float(q_u[0])
+                                    except Exception:
+                                        q_val = 1.0
+                                    u_val = q_u[1] if len(q_u) > 1 else "Seaux/Bidons"
+                                    liste_init.append({"produit": p_nom, "quantite": q_val, "unite": u_val})
+                        st.session_state[state_key] = liste_init
+
+                    if st.session_state[state_key]:
+                        for c_idx, c_item in enumerate(st.session_state[state_key]):
+                            c_col_txt, c_col_del = st.columns([4, 1])
+                            with c_col_txt:
+                                st.markdown(f"<span class='tag-materiau'>📦 {c_item['produit']} : <b>{c_item['quantite']} {c_item['unite']}</b></span>", unsafe_allow_html=True)
+                            with c_col_del:
+                                st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
+                                if st.button("❌", key=f"del_mconso_{orig_idx}_{c_idx}"):
+                                    st.session_state[state_key].pop(c_idx)
+                                    st.rerun()
+                                st.markdown('</div>', unsafe_allow_html=True)
+
+                    c_mat_col1, c_mat_col2, c_mat_col3 = st.columns([2, 1, 1])
+                    with c_mat_col1:
+                        new_mat_m = st.selectbox("Produit", config["materiaux"], key=f"sel_m_mat_{orig_idx}")
+                    with c_mat_col2:
+                        new_qte_m = st.number_input("Quantité", min_value=0.0, step=1.0, format="%.2f", key=f"sel_m_qte_{orig_idx}")
+                    with c_mat_col3:
+                        new_uni_m = st.selectbox("Unité", ["Seaux/Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "Cartouches", "U"], key=f"sel_m_uni_{orig_idx}")
+
+                    if st.button("➕ Ajouter à la consommation", key=f"btn_add_mat_{orig_idx}", use_container_width=True):
+                        if new_qte_m > 0:
+                            st.session_state[state_key].append({
+                                "produit": new_mat_m,
+                                "quantite": new_qte_m,
+                                "unite": new_uni_m
+                            })
+                            st.rerun()
+                        else:
+                            st.warning("⚠️ Indiquez une quantité supérieure à 0.")
+
+                    # 6. Observation
+                    st.write("---")
                     m_legende = st.text_input("Note de chantier / Observation", value=str(row.get("Legende", "")), key=f"m_leg_{orig_idx}")
 
                     st.write("")
                     st.markdown('<div class="btn-enregistrer-modif">', unsafe_allow_html=True)
                     if st.button("💾 Enregistrer les corrections", key=f"btn_save_{orig_idx}", use_container_width=True):
+                        if st.session_state[state_key]:
+                            conso_finale_mod = " | ".join([f"{it['produit']}: {it['quantite']} {it['unite']}" for it in st.session_state[state_key]])
+                        else:
+                            conso_finale_mod = "Aucun"
+
                         df_all.loc[orig_idx, "Date"] = str(m_date)
                         df_all.loc[orig_idx, "Chantier"] = str(m_chantier)
                         df_all.loc[orig_idx, "Corps_d_etat"] = str(m_tache)
                         df_all.loc[orig_idx, "Phase"] = str(m_phase)
                         df_all.loc[orig_idx, "Rendement"] = str(m_rendement)
                         df_all.loc[orig_idx, "Unite"] = str(m_unite)
-                        df_all.loc[orig_idx, "Consommation"] = str(m_conso)
-                        df_all.loc[orig_idx, "Effectif"] = str(m_effectif)
-                        eff_list = [e.strip() for e in str(m_effectif).split(",") if e.strip()]
-                        df_all.loc[orig_idx, "Nb_Ouvriers"] = len(eff_list)
+                        df_all.loc[orig_idx, "Consommation"] = conso_finale_mod
+                        df_all.loc[orig_idx, "Effectif"] = ", ".join(m_effectif)
+                        df_all.loc[orig_idx, "Nb_Ouvriers"] = len(m_effectif)
                         df_all.loc[orig_idx, "Legende"] = str(m_legende).replace(";", " ").replace("|", " ")
 
                         sauvegarder_donnees(df_all)
