@@ -6,204 +6,64 @@ import json
 import io
 import zipfile
 import re
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
 st.set_page_config(
-    page_title="Suivi Chantier Étanchéité",
+    page_title="Système de Suivi Technique Étanchéité",
     page_icon="🏗️",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS STRUCTURÉ PAR ÉTAPES DANS DES CADRES DÉDIÉS ---
+# --- CSS COMPLET HAUTE VISIBILITÉ & LOCK SCREEN ADMIN ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
     html, body, [class*="css"] {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        -webkit-tap-highlight-color: transparent;
-        touch-action: manipulation;
     }
 
+    /* Fond général sombre */
     .stApp {
         background-color: #0B1120 !important;
-        overflow-x: hidden !important;
     }
 
-    .block-container {
-        padding-top: 0.8rem !important;
-        padding-bottom: 18rem !important;
-        padding-left: 0.8rem !important;
-        padding-right: 0.8rem !important;
-        max-width: 100% !important;
-    }
-
-    /* TITRES ET LABELS */
-    .stMarkdown, .stMarkdown p, .stCaption, .stCaption p, [data-testid="stMarkdownContainer"] p {
-        color: #FFFFFF !important;
-    }
-    h1, h2, h3, h4, h5, h6 {
+    /* TITRES SANS COUPURE */
+    h1, h2, h3, h4, h5, h6, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5 {
         color: #FFFFFF !important;
         font-weight: 800 !important;
-    }
-    .stWidgetLabel p, [data-testid="stWidgetLabel"] p, label p {
-        color: #FFFFFF !important;
-        font-size: 14px !important;
-        font-weight: 700 !important;
-        margin-bottom: 4px !important;
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+        hyphens: none !important;
     }
 
-    /* ========================================================= */
-    /* CADRES DES ÉTAPES (SECTIONS INDÉPENDANTES)                */
-    /* ========================================================= */
-    .cadre-etape {
-        background-color: #0F172A !important;
-        border: 1px solid #334155 !important;
-        border-radius: 14px !important;
-        padding: 16px 14px !important;
-        margin-bottom: 16px !important;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
-    }
-    .titre-etape {
-        color: #FFFFFF !important;
-        font-size: 16px !important;
-        font-weight: 800 !important;
-        margin-bottom: 12px !important;
-        display: flex !important;
-        align-items: center !important;
-        border-bottom: 1px solid #1E293B !important;
-        padding-bottom: 8px !important;
-    }
-    .pastille-num {
-        background: #0284C7;
-        color: #FFFFFF;
-        font-size: 12px;
-        font-weight: 900;
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 8px;
-    }
-
-    /* ========================================================= */
-    /* TOUTES LES CASES : FOND BLANC PUR + TEXTE NOIR UNIFORME   */
-    /* ========================================================= */
-    div[data-testid="stDateInput"] div[data-baseweb="input"],
-    div[data-testid="stDateInput"] div[data-baseweb="base-input"],
-    div[data-testid="stDateInput"] input,
-    div[data-testid="stTextInput"] div[data-baseweb="input"],
-    div[data-testid="stTextInput"] input,
-    div[data-testid="stNumberInput"] div[data-baseweb="input"],
-    div[data-testid="stNumberInput"] input,
-    div[data-baseweb="base-input"],
-    div[data-baseweb="input"] {
-        background-color: #FFFFFF !important;
-        background: #FFFFFF !important;
-        color: #0F172A !important;
-        -webkit-text-fill-color: #0F172A !important;
-        border: 2px solid #CBD5E1 !important;
-        border-radius: 10px !important;
-        font-size: 16px !important;
-        font-weight: 700 !important;
-        min-height: 48px !important;
-    }
-
-    div[data-testid="stDateInput"] input {
-        color: #0F172A !important;
-        -webkit-text-fill-color: #0F172A !important;
-        font-size: 16px !important;
-        font-weight: 800 !important;
-        padding-left: 12px !important;
-    }
-
-    .stSelectbox div[data-baseweb="select"] {
-        background-color: #FFFFFF !important;
-        border: 2px solid #CBD5E1 !important;
-        border-radius: 10px !important;
-        min-height: 48px !important;
-    }
-    .stSelectbox div[data-baseweb="select"] * {
-        color: #0F172A !important;
-        -webkit-text-fill-color: #0F172A !important;
-        font-size: 15px !important;
-        font-weight: 700 !important;
-    }
-    .stMultiSelect div[data-baseweb="select"] {
-        background-color: #FFFFFF !important;
-        border: 2px solid #CBD5E1 !important;
-        border-radius: 10px !important;
-        min-height: 48px !important;
-    }
-    .stMultiSelect [data-baseweb="tag"] {
-        background-color: #0F766E !important;
-        color: #FFFFFF !important;
-        font-weight: 700 !important;
-    }
-
-    /* MENUS DÉROULANTS */
-    div[data-baseweb="popover"], ul[role="listbox"], li[role="option"] {
-        background-color: #FFFFFF !important;
-    }
-    div[data-baseweb="popover"] *, ul[role="listbox"] *, li[role="option"] * {
-        color: #0F172A !important;
-        -webkit-text-fill-color: #0F172A !important;
-        font-weight: 700 !important;
-        font-size: 15px !important;
-    }
-
-    /* ONGLETS (TABS) EN HAUT */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 6px !important;
-        margin-bottom: 14px !important;
-        border-bottom: 1px solid #334155 !important;
-    }
-    .stTabs [data-baseweb="tab"] {
-        background-color: #1E293B !important;
-        border-radius: 8px 8px 0px 0px !important;
-        border: 1px solid #334155 !important;
-        padding: 8px 14px !important;
-        height: 46px !important;
-    }
-    .stTabs [data-baseweb="tab"] * {
-        color: #FFFFFF !important;
-        font-weight: 700 !important;
-        font-size: 13px !important;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #0F172A !important;
-        border-bottom: 3px solid #38BDF8 !important;
-    }
-    .stTabs [aria-selected="true"] * {
-        color: #38BDF8 !important;
-        font-weight: 900 !important;
-    }
-
-    /* EN-TÊTE */
+    /* EN-TÊTE SMARTPHONE */
     .header-cadre {
         background-color: #0F172A;
-        border-radius: 12px;
-        padding: 14px 12px;
-        margin-bottom: 14px;
+        border-radius: 14px;
+        padding: 16px 14px;
+        box-shadow: 0 10px 24px -5px rgba(0, 0, 0, 0.6);
+        margin-bottom: 18px;
         border: 1px solid #334155;
     }
     .header-title {
-        font-size: 18px !important;
+        font-size: 19px !important;
+        line-height: 1.3 !important;
         font-weight: 900 !important;
         margin: 0 !important;
         color: #FFFFFF !important;
+        word-break: normal !important;
+        hyphens: none !important;
     }
     .header-sub {
         font-size: 12px !important;
         color: #38BDF8 !important;
-        margin-top: 4px !important;
-        font-weight: 700 !important;
+        margin-top: 5px !important;
+        font-weight: 600 !important;
     }
     .badge-pro {
         background: rgba(13, 148, 136, 0.3);
@@ -213,9 +73,102 @@ st.markdown("""
         border-radius: 6px;
         font-size: 11px;
         font-weight: 800;
+        white-space: nowrap !important;
     }
 
-    /* SÉLECTION FICHIER */
+    /* ÉCRAN DE VERROUILLAGE ADMIN (LOCK SCREEN) */
+    .lock-card {
+        background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%);
+        border: 1px solid #334155;
+        border-radius: 16px;
+        padding: 26px 18px;
+        text-align: center;
+        box-shadow: 0 14px 30px -5px rgba(0, 0, 0, 0.6);
+        margin: 15px auto 25px auto;
+    }
+    .lock-icon-badge {
+        font-size: 34px;
+        background: rgba(13, 148, 136, 0.2);
+        border: 1px solid #0D9488;
+        width: 65px;
+        height: 65px;
+        line-height: 65px;
+        border-radius: 50%;
+        margin: 0 auto 12px auto;
+        display: block;
+    }
+    .lock-title {
+        color: #FFFFFF !important;
+        font-size: 19px;
+        font-weight: 800;
+        margin: 0 0 6px 0;
+    }
+    .lock-subtitle {
+        color: #94A3B8 !important;
+        font-size: 13px;
+        line-height: 1.4;
+        margin: 0 0 16px 0;
+    }
+
+    /* LABELS DES CHAMPS */
+    .stWidgetLabel p, [data-testid="stWidgetLabel"] p, label p {
+        color: #FFFFFF !important;
+        font-size: 14px !important;
+        font-weight: 700 !important;
+    }
+
+    /* CASES DE FORMULAIRE (FOND BLANC + TEXTE NOIR) */
+    .stTextInput input, .stDateInput input, .stNumberInput input {
+        background-color: #FFFFFF !important;
+        color: #0F172A !important;
+        font-size: 15px !important;
+        font-weight: 700 !important;
+        border: 2px solid #CBD5E1 !important;
+        border-radius: 8px !important;
+    }
+    .stSelectbox div[data-baseweb="select"] {
+        background-color: #FFFFFF !important;
+        border: 2px solid #CBD5E1 !important;
+        border-radius: 8px !important;
+    }
+    .stSelectbox div[data-baseweb="select"] * {
+        color: #0F172A !important;
+        font-weight: 700 !important;
+    }
+    .stMultiSelect div[data-baseweb="select"] {
+        background-color: #FFFFFF !important;
+        border: 2px solid #CBD5E1 !important;
+        border-radius: 8px !important;
+    }
+    .stMultiSelect [data-baseweb="tag"] {
+        background-color: #0F766E !important;
+        color: #FFFFFF !important;
+        font-weight: 700 !important;
+    }
+
+    /* MENUS DÉROULANTS (POPOVER) */
+    div[data-baseweb="popover"], ul[role="listbox"], li[role="option"] {
+        background-color: #FFFFFF !important;
+    }
+    div[data-baseweb="popover"] *, ul[role="listbox"] *, li[role="option"] * {
+        color: #0F172A !important;
+        font-weight: 700 !important;
+    }
+    li[role="option"]:hover {
+        background-color: #E2E8F0 !important;
+    }
+
+    /* CALENDRIER DATEPICKER */
+    div[data-baseweb="calendar"], div[data-baseweb="calendar"] * {
+        color: #0F172A !important;
+        font-weight: 700 !important;
+    }
+    div[data-baseweb="calendar"] button[aria-selected="true"] {
+        background-color: #0F766E !important;
+        color: #FFFFFF !important;
+    }
+
+    /* SÉLECTEUR DE PHOTOS */
     [data-testid="stFileUploader"] section {
         background-color: #FFFFFF !important;
         border: 2px dashed #94A3B8 !important;
@@ -229,15 +182,25 @@ st.markdown("""
     [data-testid="stFileUploader"] section button {
         background-color: #0284C7 !important;
         border: none !important;
-        border-radius: 8px !important;
-        min-height: 42px !important;
     }
     [data-testid="stFileUploader"] section button * {
         color: #FFFFFF !important;
         font-weight: 700 !important;
     }
 
-    /* BOUTONS */
+    /* CHIFFRES STATISTIQUES / KPI */
+    [data-testid="stMetricValue"] {
+        color: #FFFFFF !important;
+        font-size: 32px !important;
+        font-weight: 900 !important;
+    }
+    [data-testid="stMetricLabel"] p {
+        color: #38BDF8 !important;
+        font-size: 14px !important;
+        font-weight: 800 !important;
+    }
+
+    /* BOUTONS D'ACTION */
     div.stButton > button {
         background-color: #0284C7 !important;
         color: #FFFFFF !important;
@@ -245,8 +208,8 @@ st.markdown("""
         font-weight: 800 !important;
         border-radius: 10px !important;
         border: none !important;
-        min-height: 48px !important;
-        width: 100% !important;
+        padding: 12px 16px !important;
+        box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3) !important;
     }
     div.stButton > button * {
         color: #FFFFFF !important;
@@ -256,24 +219,35 @@ st.markdown("""
     .btn-supprimer button {
         background-color: #DC2626 !important;
         color: #FFFFFF !important;
-        min-height: 40px !important;
+        padding: 8px 12px !important;
         font-size: 13px !important;
         font-weight: 800 !important;
+    }
+
+    .btn-enregistrer-modif button {
+        background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%) !important;
+        color: #FFFFFF !important;
+        font-size: 15px !important;
+        font-weight: 800 !important;
         border-radius: 8px !important;
+        border: none !important;
+        padding: 12px !important;
+        width: 100% !important;
     }
 
     .btn-valider button {
         background: linear-gradient(135deg, #059669 0%, #10B981 100%) !important;
         color: #FFFFFF !important;
         font-size: 16px !important;
-        font-weight: 900 !important;
+        font-weight: 800 !important;
         border-radius: 12px !important;
         border: none !important;
-        min-height: 54px !important;
+        padding: 16px !important;
         width: 100% !important;
-        box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4) !important;
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4) !important;
     }
 
+    /* BOUTONS DE TÉLÉCHARGEMENT */
     div.stDownloadButton > button {
         background-color: #FFFFFF !important;
         color: #0F172A !important;
@@ -281,8 +255,8 @@ st.markdown("""
         font-weight: 800 !important;
         border-radius: 10px !important;
         border: 2px solid #CBD5E1 !important;
-        min-height: 48px !important;
-        width: 100% !important;
+        padding: 10px 16px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
     }
     div.stDownloadButton > button * {
         color: #0F172A !important;
@@ -291,76 +265,82 @@ st.markdown("""
 
     /* CARTES DES INTERVENTIONS */
     .card-intervention {
-        background-color: #111827 !important;
-        border-radius: 12px !important;
-        border: 1px solid #334155 !important;
-        padding: 14px !important;
-        margin-bottom: 14px !important;
-        border-left: 5px solid #10B981 !important;
+        background-color: #111827;
+        border-radius: 14px;
+        border: 1px solid #334155;
+        padding: 16px;
+        margin-bottom: 16px;
+        border-left: 5px solid #10B981;
     }
-    .card-text-white {
-        color: #FFFFFF !important;
-        font-size: 14px !important;
-        font-weight: 600 !important;
-        margin: 6px 0 !important;
-    }
-    .card-text-cyan {
-        color: #38BDF8 !important;
-        font-size: 13px !important;
-        font-weight: 700 !important;
-    }
-    .card-text-note {
-        color: #F8FAFC !important;
-        font-size: 14px !important;
-        font-style: italic !important;
-        margin-top: 6px !important;
-    }
-
     .tag-projet {
-        font-size: 15px !important;
-        font-weight: 900 !important;
+        font-size: 15px;
+        font-weight: 900;
         color: #FFFFFF !important;
     }
     .tag-date {
-        font-size: 12px !important;
-        font-weight: 700 !important;
+        font-size: 12px;
+        font-weight: 700;
         color: #FFFFFF !important;
-        background: #1E293B !important;
-        padding: 4px 8px !important;
-        border-radius: 6px !important;
-        border: 1px solid #475569 !important;
+        background: #1E293B;
+        padding: 3px 8px;
+        border-radius: 6px;
+        border: 1px solid #475569;
     }
     .tag-corps {
-        display: inline-block !important;
-        background-color: #1E293B !important;
+        display: inline-block;
+        background-color: #1E293B;
         color: #FFFFFF !important;
-        border: 1px solid #475569 !important;
-        padding: 4px 8px !important;
-        border-radius: 6px !important;
-        font-size: 12px !important;
-        font-weight: 800 !important;
+        border: 1px solid #475569;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 800;
     }
     .tag-rendement {
-        display: inline-block !important;
-        background-color: #064E3B !important;
+        display: inline-block;
+        background-color: #064E3B;
         color: #6EE7B7 !important;
-        border: 1px solid #059669 !important;
-        padding: 4px 8px !important;
-        border-radius: 6px !important;
-        font-size: 12px !important;
-        font-weight: 900 !important;
-        margin-left: 4px !important;
+        border: 1px solid #059669;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 900;
+        margin-left: 6px;
     }
     .tag-materiau {
-        display: inline-block !important;
-        background-color: #082F49 !important;
+        display: inline-block;
+        background-color: #082F49;
         color: #7DD3FC !important;
-        border: 1px solid #0284C7 !important;
-        padding: 4px 8px !important;
-        border-radius: 6px !important;
-        font-size: 12px !important;
-        font-weight: 800 !important;
-        margin: 2px 3px 2px 0 !important;
+        border: 1px solid #0284C7;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 800;
+        margin: 3px 4px 3px 0;
+    }
+
+    /* ONGLETS */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 6px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 44px;
+        background-color: #1E293B;
+        border-radius: 8px 8px 0px 0px;
+        color: #FFFFFF !important;
+        font-weight: 800;
+        font-size: 13px;
+        border: 1px solid #334155;
+        padding: 6px 12px;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #0F172A !important;
+        color: #38BDF8 !important;
+        border-top: 3px solid #38BDF8 !important;
+    }
+    hr {
+        border-color: #334155 !important;
+        margin: 18px 0 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -466,227 +446,96 @@ def sauvegarder_donnees(df_to_save):
     except Exception:
         return False
 
-def appliquer_watermark(image_file, chantier, tache, phase, date_str):
-    try:
-        img = Image.open(image_file).convert("RGB")
-        w, h = img.size
-
-        overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(overlay)
-
-        band_h = max(int(h * 0.11), 80)
-        draw.rectangle([(0, h - band_h), (w, h)], fill=(15, 23, 42, 210))
-
-        font_size_titre = max(int(band_h * 0.32), 16)
-        font_size_sub = max(int(band_h * 0.24), 13)
-
-        try:
-            font_t = ImageFont.truetype("arial.ttf", font_size_titre)
-            font_s = ImageFont.truetype("arial.ttf", font_size_sub)
-        except Exception:
-            font_t = ImageFont.load_default()
-            font_s = ImageFont.load_default()
-
-        heure_actuelle = datetime.now().strftime("%H:%M")
-        ligne_1 = f"PROJET : {chantier}   |   DATE : {date_str} a {heure_actuelle}"
-        ligne_2 = f"OUVRAGE : {tache}   |   PHASE : {phase}"
-
-        marge_x = max(int(w * 0.03), 20)
-        draw.text((marge_x, h - band_h + int(band_h * 0.18)), ligne_1, fill=(255, 255, 255, 255), font=font_t)
-        draw.text((marge_x, h - band_h + int(band_h * 0.55)), ligne_2, fill=(56, 189, 248, 255), font=font_s)
-
-        img_finale = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
-        out_bytes = io.BytesIO()
-        img_finale.save(out_bytes, format="JPEG", quality=90)
-        return out_bytes.getvalue()
-    except Exception:
-        return image_file.getbuffer()
-
 def generer_rapport_excel(df_source):
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
 
-    c_navy = "1E3A8A"
-    c_header = "0F766E"
-    c_row_alt = "F8FAFC"
-    c_total = "E2E8F0"
-    
-    font_title = Font(name="Calibri", size=14, bold=True, color="FFFFFF")
-    font_header = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
-    font_data = Font(name="Calibri", size=10, color="0F172A")
-    font_total = Font(name="Calibri", size=11, bold=True, color="1E3A8A")
-
-    fill_title = PatternFill(start_color=c_navy, end_color=c_navy, fill_type="solid")
-    fill_header = PatternFill(start_color=c_header, end_color=c_header, fill_type="solid")
-    fill_alt = PatternFill(start_color=c_row_alt, end_color=c_row_alt, fill_type="solid")
-    fill_tot = PatternFill(start_color=c_total, end_color=c_total, fill_type="solid")
-
+    header_fill = PatternFill(start_color="0F766E", end_color="0F766E", fill_type="solid")
+    header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    data_font = Font(name="Calibri", size=10)
     border_thin = Border(
         left=Side(style='thin', color='CBD5E1'),
         right=Side(style='thin', color='CBD5E1'),
         top=Side(style='thin', color='CBD5E1'),
         bottom=Side(style='thin', color='CBD5E1')
     )
-    border_double = Border(
-        top=Side(style='thin', color='94A3B8'),
-        bottom=Side(style='double', color='0F172A')
-    )
 
-    # 1. FEUILLE DE SYNTHÈSE GÉNÉRALE
-    ws_main = wb.create_sheet(title="Synthèse Générale")
-    ws_main.merge_cells("A1:E1")
-    ws_main["A1"] = "TABLEAU DE BORD GLOBAL - SUIVI DES CHANTIERS D'ÉTANCHÉITÉ"
-    ws_main["A1"].font = font_title
-    ws_main["A1"].fill = fill_title
-    ws_main["A1"].alignment = Alignment(horizontal="center", vertical="center")
-    ws_main.row_dimensions[1].height = 36
+    def styliser_feuille(ws, titre_entete):
+        for col in range(1, len(titre_entete) + 1):
+            cell = ws.cell(row=1, column=col)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
-    headers_syn = ["Chantier / Projet", "Surface Totale (m²)", "Linéaire Total (ML)", "Unités (U)", "Interventions"]
-    ws_main.append([])
-    ws_main.append(headers_syn)
-    ws_main.row_dimensions[3].height = 26
+        for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=len(titre_entete)):
+            for cell in row:
+                cell.font = data_font
+                cell.border = border_thin
+                if isinstance(cell.value, (int, float)):
+                    cell.alignment = Alignment(horizontal="right", vertical="center")
+                else:
+                    cell.alignment = Alignment(horizontal="left", vertical="center")
 
-    for col_i in range(1, len(headers_syn) + 1):
-        cell = ws_main.cell(row=3, column=col_i)
-        cell.font = font_header
-        cell.fill = fill_header
-        cell.alignment = Alignment(horizontal="center", vertical="center")
+        ws.row_dimensions[1].height = 28
+        for col in ws.columns:
+            max_len = max(len(str(cell.value or '')) for cell in col)
+            col_letter = get_column_letter(col[0].column)
+            ws.column_dimensions[col_letter].width = max(max_len + 5, 13)
 
+    # 1. Synthèse
+    ws1 = wb.create_sheet(title="Synthèse Chantiers")
+    headers1 = ["Chantier", "Surface Réalisée (m²)", "Linéaire Réalisé (ML)", "Unités (U)", "Total Interventions"]
+    ws1.append(headers1)
     chantiers_uniques = [c for c in df_source["Chantier"].dropna().unique() if not str(c).startswith("2026-") and str(c).strip()]
-    
-    tot_m2_glob = 0.0
-    tot_ml_glob = 0.0
-    tot_u_glob = 0.0
-    current_r = 4
-
     for ch in sorted(chantiers_uniques):
         sub = df_source[df_source["Chantier"] == ch].copy()
         sub["Rendement_num"] = pd.to_numeric(sub.get("Rendement", 0), errors='coerce').fillna(0)
         unite_col = sub.get("Unite", pd.Series([""] * len(sub))).astype(str)
+        m2 = sub[unite_col.str.contains("m²", na=False)]["Rendement_num"].sum()
+        ml = sub[unite_col.str.contains("ML", na=False)]["Rendement_num"].sum()
+        u = sub[unite_col.str.contains("U", na=False)]["Rendement_num"].sum()
+        ws1.append([ch, round(m2, 2), round(ml, 2), round(u, 2), len(sub)])
+    styliser_feuille(ws1, headers1)
 
-        m2 = float(sub[unite_col.str.contains("m²", na=False)]["Rendement_num"].sum())
-        ml = float(sub[unite_col.str.contains("ML", na=False)]["Rendement_num"].sum())
-        u = float(sub[unite_col.str.contains("U", na=False)]["Rendement_num"].sum())
+    # 2. Consommation
+    ws2 = wb.create_sheet(title="Consommation Matériaux")
+    headers2 = ["Date", "Chantier", "Corps d'État", "Matériaux Consommés", "Remarques"]
+    ws2.append(headers2)
+    for _, r in df_source.iterrows():
+        c_mat = str(r.get("Consommation", "")).strip()
+        if not c_mat or c_mat == "nan":
+            c_mat = "Aucun"
+        ws2.append([r.get("Date", ""), r.get("Chantier", ""), r.get("Corps_d_etat", ""), c_mat, r.get("Legende", "")])
+    styliser_feuille(ws2, headers2)
 
-        tot_m2_glob += m2
-        tot_ml_glob += ml
-        tot_u_glob += u
+    # 3. Effectif
+    ws3 = wb.create_sheet(title="Pointage Ouvriers")
+    headers3 = ["Date", "Chantier", "Corps d'État", "Effectif Présent", "Nombre d'Ouvriers"]
+    ws3.append(headers3)
+    for _, r in df_source.iterrows():
+        ws3.append([r.get("Date", ""), r.get("Chantier", ""), r.get("Corps_d_etat", ""), r.get("Effectif", ""), r.get("Nb_Ouvriers", "")])
+    styliser_feuille(ws3, headers3)
 
-        ws_main.append([ch, round(m2, 2), round(ml, 2), round(u, 2), len(sub)])
-        
-        for c_idx in range(1, 6):
-            c_cell = ws_main.cell(row=current_r, column=c_idx)
-            c_cell.font = font_data
-            c_cell.border = border_thin
-            if current_r % 2 == 1:
-                c_cell.fill = fill_alt
-            if c_idx >= 2:
-                c_cell.alignment = Alignment(horizontal="right", vertical="center")
-            else:
-                c_cell.alignment = Alignment(horizontal="left", vertical="center")
-        current_r += 1
-
-    ws_main.append(["TOTAL GÉNÉRAL", round(tot_m2_glob, 2), round(tot_ml_glob, 2), round(tot_u_glob, 2), len(df_source)])
-    for c_idx in range(1, 6):
-        c_cell = ws_main.cell(row=current_r, column=c_idx)
-        c_cell.font = font_total
-        c_cell.fill = fill_tot
-        c_cell.border = border_double
-        if c_idx >= 2:
-            c_cell.alignment = Alignment(horizontal="right", vertical="center")
-
-    for col in ws_main.columns:
-        max_l = max(len(str(c.value or '')) for c in col)
-        col_letter = get_column_letter(col[0].column)
-        ws_main.column_dimensions[col_letter].width = max(max_l + 6, 16)
-
-    # 2. FEUILLE PAR CHANTIER
-    for ch in sorted(chantiers_uniques):
-        sub_ch = df_source[df_source["Chantier"] == ch].copy()
-        clean_titre = re.sub(r'[^a-zA-Z0-9_-]', '_', ch.split('(')[0].strip())[:28]
-        ws_ch = wb.create_sheet(title=clean_titre)
-
-        ws_ch.merge_cells("A1:H1")
-        ws_ch["A1"] = f"REGISTRE D'ATTACHEMENT TECHNIQUE — CHANTIER : {ch.upper()}"
-        ws_ch["A1"].font = font_title
-        ws_ch["A1"].fill = fill_title
-        ws_ch["A1"].alignment = Alignment(horizontal="center", vertical="center")
-        ws_ch.row_dimensions[1].height = 36
-
-        headers_ch = [
-            "Date", "Corps d'État / Ouvrage", "Phase Réalisation", 
-            "Rendement", "Unité", "Matériaux Consommés", 
-            "Équipe Présente", "Observations / Notes"
-        ]
-        ws_ch.append([])
-        ws_ch.append(headers_ch)
-        ws_ch.row_dimensions[3].height = 26
-
-        for col_i in range(1, len(headers_ch) + 1):
-            cell = ws_ch.cell(row=3, column=col_i)
-            cell.font = font_header
-            cell.fill = fill_header
-            cell.alignment = Alignment(horizontal="center", vertical="center")
-
-        row_ch_idx = 4
-        m2_chantier = 0.0
-        ml_chantier = 0.0
-
-        for _, r in sub_ch.iterrows():
-            c_mat = str(r.get("Consommation", "")).strip()
-            if not c_mat or c_mat == "nan":
-                c_mat = "Aucun"
-
-            rend_val = pd.to_numeric(r.get("Rendement", 0), errors='coerce') or 0.0
-            unite_val = str(r.get("Unite", ""))
-            if "m²" in unite_val:
-                m2_chantier += rend_val
-            elif "ML" in unite_val:
-                ml_chantier += rend_val
-
-            ws_ch.append([
-                r.get("Date", ""),
-                r.get("Corps_d_etat", ""),
-                r.get("Phase", ""),
-                rend_val,
-                unite_val,
-                c_mat,
-                r.get("Effectif", ""),
-                r.get("Legende", "")
-            ])
-
-            for c_i in range(1, 9):
-                cell = ws_ch.cell(row=row_ch_idx, column=c_i)
-                cell.font = font_data
-                cell.border = border_thin
-                if row_ch_idx % 2 == 1:
-                    cell.fill = fill_alt
-                if c_i == 4:
-                    cell.alignment = Alignment(horizontal="right", vertical="center")
-                elif c_i in [1, 5]:
-                    cell.alignment = Alignment(horizontal="center", vertical="center")
-                else:
-                    cell.alignment = Alignment(horizontal="left", vertical="center")
-
-            row_ch_idx += 1
-
-        ws_ch.append([
-            "TOTAL RÉALISÉ", "", "", 
-            f"{round(m2_chantier, 2)} m² | {round(ml_chantier, 2)} ML", 
-            "", "", f"{len(sub_ch)} rapports", ""
+    # 4. Journal Détaillé
+    ws4 = wb.create_sheet(title="Journal Détaillé")
+    headers4 = ["Date", "Chantier", "Corps d'État", "Phase", "Rendement", "Unité", "Consommation", "Effectif", "Observation"]
+    ws4.append(headers4)
+    for _, r in df_source.iterrows():
+        c_mat = str(r.get("Consommation", "")).strip()
+        if not c_mat or c_mat == "nan":
+            c_mat = "-"
+        ws4.append([
+            r.get("Date", ""),
+            r.get("Chantier", ""),
+            r.get("Corps_d_etat", ""),
+            r.get("Phase", ""),
+            pd.to_numeric(r.get("Rendement", 0), errors='coerce') or 0,
+            r.get("Unite", ""),
+            c_mat,
+            r.get("Effectif", ""),
+            r.get("Legende", "")
         ])
-        for c_i in range(1, 9):
-            cell = ws_ch.cell(row=row_ch_idx, column=c_i)
-            cell.font = font_total
-            cell.fill = fill_tot
-            cell.border = border_double
-            if c_i == 4:
-                cell.alignment = Alignment(horizontal="right", vertical="center")
-
-        for col in ws_ch.columns:
-            max_l = max(len(str(c.value or '')) for c in col)
-            col_letter = get_column_letter(col[0].column)
-            ws_ch.column_dimensions[col_letter].width = max(max_l + 5, 14)
+    styliser_feuille(ws4, headers4)
 
     out = io.BytesIO()
     wb.save(out)
@@ -697,20 +546,18 @@ config = charger_config()
 if "liste_consommations" not in st.session_state:
     st.session_state.liste_consommations = []
 
-# ONGLETS VISIBLES ET BIEN DÉFINIS
-tab_saisie, tab_admin = st.tabs(["📲 Saisie Terrain", "📊 Supervision & Rapports"])
+tab_saisie, tab_admin = st.tabs(["📲 Saisie Terrain", "📊 Espace Encadrement & Rapports"])
 
 # -------------------------------------------------------------
-# ONGLET 1 : SAISIE TERRAIN DÉCOUPÉE EN CADRES DÉDIÉS
+# ONGLET 1 : SAISIE TERRAIN (CALIBRÉE SMARTPHONE)
 # -------------------------------------------------------------
 with tab_saisie:
-    # BANDEAU D'EN-TÊTE
     st.markdown("""
         <div class='header-cadre'>
             <div style='display: flex; justify-content: space-between; align-items: center;'>
                 <div>
-                    <h1 class='header-title'>Rapport Journalier</h1>
-                    <div class='header-sub'>Étanchéité technique & Traitement</div>
+                    <h1 class='header-title'>Rapport Journalier d'Exécution</h1>
+                    <div class='header-sub'>Étanchéité technique & Traitement des supports</div>
                 </div>
                 <div>
                     <span class='badge-pro'>PRO V1.0</span>
@@ -719,20 +566,12 @@ with tab_saisie:
         </div>
     """, unsafe_allow_html=True)
 
-    # =========================================================
-    # CADRE 1 : LOCALISATION & TÂCHE
-    # =========================================================
-    st.markdown("""
-        <div class='cadre-etape'>
-            <div class='titre-etape'>
-                <span class='pastille-num'>1</span>
-                <span>Localisation & Tâche</span>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-    with st.container():
+    st.markdown("### 📍 Localisation & Tâche")
+    c_p1, c_p2 = st.columns([1, 1])
+    with c_p1:
         date_jour = st.date_input("Date des travaux", value=date.today())
         chantier_sel = st.selectbox("Projet / Chantier", config["chantiers"])
+    with c_p2:
         tache_sel = st.selectbox("Corps d'état / Ouvrage", config["taches"])
         phase_travaux = st.selectbox("Phase de réalisation", [
             "Pendant exécution / application",
@@ -743,97 +582,70 @@ with tab_saisie:
             "Autre"
         ])
 
-    # =========================================================
-    # CADRE 2 : ÉQUIPE & MÉTRÉ
-    # =========================================================
-    st.markdown("""
-        <div class='cadre-etape'>
-            <div class='titre-etape'>
-                <span class='pastille-num'>2</span>
-                <span>Équipe mobilisée & Métré</span>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-    with st.container():
-        macons_presents = st.multiselect("Compagnons présents", config["macons"], placeholder="Sélectionnez l'équipe...")
-        c_r1, c_r2 = st.columns([2, 1])
-        with c_r1:
-            rendement = st.number_input("Métré réalisé", min_value=0.0, step=1.0, format="%.2f")
-        with c_r2:
-            unite = st.selectbox("Unité", ["m²", "ML", "U"])
+    st.write("---")
+    st.markdown("### 👷 Équipe mobilisée & Metré")
+    macons_presents = st.multiselect("Personnel d'exécution présent", config["macons"], placeholder="Sélectionnez les compagnons...")
 
-    # =========================================================
-    # CADRE 3 : MATÉRIAUX APPLIQUÉS
-    # =========================================================
-    st.markdown("""
-        <div class='cadre-etape'>
-            <div class='titre-etape'>
-                <span class='pastille-num'>3</span>
-                <span>Matériaux & Produits Consommés</span>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-    with st.container():
-        if st.session_state.liste_consommations:
-            for idx_c, item in enumerate(st.session_state.liste_consommations):
-                col_txt, col_sup = st.columns([3, 1])
-                with col_txt:
-                    st.markdown(f"<span class='tag-materiau'>📦 {item['produit']} : <b>{item['quantite']} {item['unite']}</b></span>", unsafe_allow_html=True)
-                with col_sup:
-                    st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
-                    if st.button("Suppr.", key=f"del_{idx_c}"):
-                        st.session_state.liste_consommations.pop(idx_c)
-                        st.rerun()
-                    st.markdown('</div>', unsafe_allow_html=True)
+    c_r1, c_r2 = st.columns([2, 1])
+    with c_r1:
+        rendement = st.number_input("Métré / Rendement réalisé", min_value=0.0, step=1.0, format="%.2f")
+    with c_r2:
+        unite = st.selectbox("Unité de mesure", ["m²", "ML", "U"])
 
-        with st.expander("➕ Ajouter un matériau consommé", expanded=True):
-            nouveau_mat = st.selectbox("Produit appliqué", config["materiaux"], key="ajout_mat")
-            cp2, cp3 = st.columns([1, 1])
-            with cp2:
-                nouvelle_qte = st.number_input("Quantité", min_value=0.0, step=1.0, format="%.2f", key="ajout_qte")
-            with cp3:
-                nouvelle_uni = st.selectbox("Unité", ["Seaux/Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "Cartouches", "U"], key="ajout_uni")
+    st.write("---")
+    st.markdown("### 🧪 Matériaux & Produits Appliqués")
 
-            if st.button("➕ Ajouter au registre", use_container_width=True):
-                if nouvelle_qte > 0:
-                    st.session_state.liste_consommations.append({
-                        "produit": nouveau_mat,
-                        "quantite": nouvelle_qte,
-                        "unite": nouvelle_uni
-                    })
+    if st.session_state.liste_consommations:
+        for idx_c, item in enumerate(st.session_state.liste_consommations):
+            col_txt, col_sup = st.columns([4, 1])
+            with col_txt:
+                st.markdown(f"<span class='tag-materiau'>📦 {item['produit']} : <b>{item['quantite']} {item['unite']}</b></span>", unsafe_allow_html=True)
+            with col_sup:
+                st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
+                if st.button("Supprimer", key=f"del_{idx_c}"):
+                    st.session_state.liste_consommations.pop(idx_c)
                     st.rerun()
-                else:
-                    st.warning("⚠️ Précisez une quantité > 0.")
+                st.markdown('</div>', unsafe_allow_html=True)
 
-    # =========================================================
-    # CADRE 4 : JUSTIFICATIFS & TRANSMISSION
-    # =========================================================
-    st.markdown("""
-        <div class='cadre-etape'>
-            <div class='titre-etape'>
-                <span class='pastille-num'>4</span>
-                <span>Documentation Photo & Remarques</span>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-    with st.container():
-        photos_galerie = st.file_uploader(
-            "Photos justificatives (Horodatage automatique)",
-            type=["jpg", "jpeg", "png"],
-            accept_multiple_files=True
-        )
-        legende = st.text_input("Observations techniques", placeholder="Ex : Support sec, dépoussiéré avant primaire...")
+    with st.expander("➕ Enregistrer un matériau consommé", expanded=True):
+        cp1, cp2, cp3 = st.columns([2, 1, 1])
+        with cp1:
+            nouveau_mat = st.selectbox("Produit appliqué", config["materiaux"], key="ajout_mat")
+        with cp2:
+            nouvelle_qte = st.number_input("Quantité", min_value=0.0, step=1.0, format="%.2f", key="ajout_qte")
+        with cp3:
+            nouvelle_uni = st.selectbox("Conditionnement", ["Seaux/Bidons", "Sacs", "Rouleaux", "Kg", "Litres", "Cartouches", "U"], key="ajout_uni")
 
-        st.write("")
-        st.markdown('<div class="btn-valider">', unsafe_allow_html=True)
-        envoyer_btn = st.button("🚀 TRANSMETTRE LE RAPPORT", use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        if st.button("➕ Ajouter le produit au registre", use_container_width=True):
+            if nouvelle_qte > 0:
+                st.session_state.liste_consommations.append({
+                    "produit": nouveau_mat,
+                    "quantite": nouvelle_qte,
+                    "unite": nouvelle_uni
+                })
+                st.rerun()
+            else:
+                st.warning("⚠️ Précisez une quantité supérieure à 0.")
+
+    st.write("---")
+    st.markdown("### 📸 Pièces Jointes & Justificatifs")
+    photos_galerie = st.file_uploader(
+        "Photos justificatives de l'ouvrage (Sélection multiple)",
+        type=["jpg", "jpeg", "png"],
+        accept_multiple_files=True
+    )
+    legende = st.text_input("Observations techniques particulières", placeholder="Ex : Support brossé et dépoussiéré avant couche primaire...")
+
+    st.write("")
+    st.markdown('<div class="btn-valider">', unsafe_allow_html=True)
+    envoyer_btn = st.button("TRANSMETTRE LE RAPPORT JOURNALIER", use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
     if envoyer_btn:
         if not macons_presents:
-            st.error("⚠️ Sélectionnez au moins un ouvrier.")
+            st.error("⚠️ Veuillez déclarer au moins un ouvrier pour cet ouvrage.")
         elif not photos_galerie:
-            st.error("⚠️ Ajoutez au moins une photo justificative.")
+            st.error("⚠️ La conformité technique impose l'ajout d'au moins une photo justificative.")
         else:
             try:
                 dossier_chantier = clean_folder_name(chantier_sel)
@@ -847,12 +659,14 @@ with tab_saisie:
 
                 for idx, p in enumerate(photos_galerie):
                     ext = ".jpg"
+                    if hasattr(p, "name") and os.path.splitext(p.name)[1]:
+                        ext = os.path.splitext(p.name)[1].lower()
+
                     nom_fichier = f"{tache_clean}_{idx+1}{ext}"
                     chemin_disque = os.path.join(chemin_cible, nom_fichier)
 
-                    photo_bytes = appliquer_watermark(p, chantier_sel, tache_sel, phase_travaux, str(date_jour))
                     with open(chemin_disque, "wb") as f_img:
-                        f_img.write(photo_bytes)
+                        f_img.write(p.getbuffer())
 
                     saved_files.append(f"{dossier_chantier}/{dossier_date}/{nom_fichier}")
 
@@ -885,118 +699,162 @@ with tab_saisie:
 
                 st.session_state.liste_consommations = []
                 st.balloons()
-                st.success(f"✅ Rapport validé avec succès !")
+                st.success(f"✅ Rapport validé et intégré au registre officiel : {dossier_chantier} [{dossier_date}]")
             except Exception as e:
-                st.error(f"❌ Erreur : {e}")
+                st.error(f"❌ Erreur de transmission : {e}")
 
 # -------------------------------------------------------------
-# ONGLET 2 : SUPERVISION & RAPPORTS
+# ONGLET 2 : ESPACE CADRE, DIRECTION & ÉCRAN DE SÉCURITÉ
 # -------------------------------------------------------------
 with tab_admin:
-    st.markdown("""
-        <div class='header-cadre'>
-            <div style='display: flex; justify-content: space-between; align-items: center;'>
-                <div>
-                    <h1 class='header-title'>Tableau de Bord</h1>
-                    <div class='header-sub'>Supervision technique & Rapports</div>
-                </div>
-                <div>
-                    <span class='badge-pro'>ADMIN</span>
+    # Initialisation de l'état d'authentification
+    if "admin_logged_in" not in st.session_state:
+        st.session_state.admin_logged_in = False
+
+    # SI L'ADMIN N'EST PAS ENCORE CONNECTÉ : ÉCRAN DE VERROUILLAGE PRO
+    if not st.session_state.admin_logged_in:
+        st.markdown("""
+            <div class='lock-card'>
+                <div class='lock-icon-badge'>🛡️</div>
+                <h2 class='lock-title'>Authentification Supervision</h2>
+                <p class='lock-subtitle'>Espace réservé à l'encadrement technique et à la direction des travaux.<br>Saisissez votre code PIN pour déverrouiller l'accès.</p>
+            </div>
+        """, unsafe_allow_html=True)
+
+        c_lock1, c_lock2, c_lock3 = st.columns([1, 2, 1])
+        with c_lock2:
+            code_saisi = st.text_input("Code d'accès secret :", type="password", placeholder="Entrez le code PIN...", key="input_pin_auth")
+            if st.button("🔓 DÉVERROUILLER L'ESPACE SUPERVISION", use_container_width=True):
+                if code_saisi == ADMIN_PIN:
+                    st.session_state.admin_logged_in = True
+                    st.rerun()
+                else:
+                    st.error("❌ Code PIN incorrect. Accès refusé.")
+
+    # SI L'ADMIN EST CONNECTÉ : AFFICHAGE DU DASHBOARD COMPLET
+    else:
+        st.markdown("""
+            <div class='header-cadre'>
+                <div style='display: flex; justify-content: space-between; align-items: center;'>
+                    <div>
+                        <h1 class='header-title'>Tableau de Bord & Attachements</h1>
+                        <div class='header-sub'>Supervision technique, synthèse des consommations et exports</div>
+                    </div>
+                    <div>
+                        <span class='badge-pro'>SUPERVISION ACTIVE</span>
+                    </div>
                 </div>
             </div>
-        </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
-    pin = st.text_input("Authentification (Code PIN) :", type="password", placeholder="Code PIN...")
-
-    if pin == ADMIN_PIN:
-        with st.expander("⚙️ Gestion des Listes (Ajouter / Supprimer)", expanded=False):
-            # CHANTIERS
-            st.markdown("<p style='color: #38BDF8 !important; font-weight: 800;'>🏢 Chantiers / Projets</p>", unsafe_allow_html=True)
-            nouveau_chantier = st.text_input("Nouveau chantier", placeholder="Ex : PROJET-CENTRE...", key="add_ch")
-            if st.button("➕ Ajouter ce chantier", use_container_width=True):
-                val = nouveau_chantier.strip()
-                if val and val not in config["chantiers"]:
-                    config["chantiers"].append(val)
-                    sauvegarder_config(config)
-                    st.success(f"Chantier « {val} » ajouté !")
-                    st.rerun()
-
-            del_ch = st.selectbox("Supprimer un chantier", ["-- Sélectionner --"] + config["chantiers"], key="del_ch_box")
+        # Bouton de déconnexion rapide
+        c_dec1, c_dec2 = st.columns([3, 1])
+        with c_dec2:
             st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
-            if st.button("🗑️ Supprimer ce chantier", use_container_width=True):
-                if del_ch != "-- Sélectionner --":
-                    config["chantiers"].remove(del_ch)
-                    sauvegarder_config(config)
-                    st.success(f"Chantier supprimé !")
-                    st.rerun()
+            if st.button("🔒 Verrouiller la session", use_container_width=True):
+                st.session_state.admin_logged_in = False
+                st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
-            # TÂCHES
+        # GESTION DES LISTES (AJOUT / SUPPRESSION)
+        with st.expander("⚙️ Configuration des Listes (Ajouter / Supprimer des options)", expanded=False):
+            st.markdown("##### 🛠️ Gestion des Chantiers, Tâches, Matériaux et Compagnons")
+            
+            # 1. Chantiers
             st.write("---")
-            st.markdown("<p style='color: #38BDF8 !important; font-weight: 800;'>🛠️ Corps d'État / Tâches</p>", unsafe_allow_html=True)
-            nouvelle_tache = st.text_input("Nouvelle tâche", placeholder="Ex : ÉTANCHÉITÉ...", key="add_tache")
-            if st.button("➕ Ajouter cette tâche", use_container_width=True):
-                val = nouvelle_tache.strip()
-                if val and val not in config["taches"]:
-                    config["taches"].append(val)
-                    sauvegarder_config(config)
-                    st.success(f"Tâche ajoutée !")
-                    st.rerun()
+            st.markdown("**🏢 1. Chantiers / Projets**")
+            c_ch1, c_ch2 = st.columns(2)
+            with c_ch1:
+                nouveau_chantier = st.text_input("Nouveau chantier à ajouter", placeholder="Ex : NOUVEAU-PROJET...", key="add_ch")
+                if st.button("➕ Ajouter ce chantier", use_container_width=True):
+                    val = nouveau_chantier.strip()
+                    if val and val not in config["chantiers"]:
+                        config["chantiers"].append(val)
+                        sauvegarder_config(config)
+                        st.success(f"Chantier « {val} » ajouté !")
+                        st.rerun()
+            with c_ch2:
+                del_ch = st.selectbox("Sélectionner un chantier à supprimer", ["-- Sélectionner --"] + config["chantiers"], key="del_ch_box")
+                st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
+                if st.button("🗑️ Supprimer le chantier sélectionné", use_container_width=True):
+                    if del_ch != "-- Sélectionner --":
+                        config["chantiers"].remove(del_ch)
+                        sauvegarder_config(config)
+                        st.success(f"Chantier « {del_ch} » retiré de la liste !")
+                        st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
-            del_tache = st.selectbox("Supprimer une tâche", ["-- Sélectionner --"] + config["taches"], key="del_tache_box")
-            st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
-            if st.button("🗑️ Supprimer cette tâche", use_container_width=True):
-                if del_tache != "-- Sélectionner --":
-                    config["taches"].remove(del_tache)
-                    sauvegarder_config(config)
-                    st.success(f"Tâche supprimée !")
-                    st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-
-            # PRODUITS
+            # 2. Corps d'état
             st.write("---")
-            st.markdown("<p style='color: #38BDF8 !important; font-weight: 800;'>🧪 Matériaux</p>", unsafe_allow_html=True)
-            nouveau_mat = st.text_input("Nouveau produit", placeholder="Ex : RESINE...", key="add_mat")
-            if st.button("➕ Ajouter ce produit", use_container_width=True):
-                val = nouveau_mat.strip()
-                if val and val not in config["materiaux"]:
-                    config["materiaux"].insert(-1, val)
-                    sauvegarder_config(config)
-                    st.success(f"Produit ajouté !")
-                    st.rerun()
+            st.markdown("**🛠️ 2. Corps d'État / Tâches**")
+            c_t1, c_t2 = st.columns(2)
+            with c_t1:
+                nouvelle_tache = st.text_input("Nouvelle tâche à ajouter", placeholder="Ex : ÉTANCHÉITÉ CUVELAGE...", key="add_tache")
+                if st.button("➕ Ajouter cette tâche", use_container_width=True):
+                    val = nouvelle_tache.strip()
+                    if val and val not in config["taches"]:
+                        config["taches"].append(val)
+                        sauvegarder_config(config)
+                        st.success(f"Tâche « {val} » ajoutée !")
+                        st.rerun()
+            with c_t2:
+                del_tache = st.selectbox("Sélectionner une tâche à supprimer", ["-- Sélectionner --"] + config["taches"], key="del_tache_box")
+                st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
+                if st.button("🗑️ Supprimer la tâche sélectionnée", use_container_width=True):
+                    if del_tache != "-- Sélectionner --":
+                        config["taches"].remove(del_tache)
+                        sauvegarder_config(config)
+                        st.success(f"Tâche « {del_tache} » retirée de la liste !")
+                        st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
-            del_mat = st.selectbox("Supprimer un produit", ["-- Sélectionner --"] + config["materiaux"], key="del_mat_box")
-            st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
-            if st.button("🗑️ Supprimer ce produit", use_container_width=True):
-                if del_mat != "-- Sélectionner --":
-                    config["materiaux"].remove(del_mat)
-                    sauvegarder_config(config)
-                    st.success(f"Produit supprimé !")
-                    st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-
-            # COMPAGNONS
+            # 3. Matériaux
             st.write("---")
-            st.markdown("<p style='color: #38BDF8 !important; font-weight: 800;'>👷 Compagnons / Équipe</p>", unsafe_allow_html=True)
-            nouveau_macon = st.text_input("Nouvel ouvrier", placeholder="Ex : Nom & Prénom...", key="add_macon")
-            if st.button("➕ Ajouter cet ouvrier", use_container_width=True):
-                val = nouveau_macon.strip()
-                if val and val not in config["macons"]:
-                    config["macons"].append(val)
-                    sauvegarder_config(config)
-                    st.success(f"Ouvrier ajouté !")
-                    st.rerun()
+            st.markdown("**🧪 3. Matériaux & Produits Consommés**")
+            c_m1, c_m2 = st.columns(2)
+            with c_m1:
+                nouveau_mat = st.text_input("Nouveau matériau à ajouter", placeholder="Ex : RESINE POLYURETHANE...", key="add_mat")
+                if st.button("➕ Ajouter ce produit", use_container_width=True):
+                    val = nouveau_mat.strip()
+                    if val and val not in config["materiaux"]:
+                        config["materiaux"].insert(-1, val)
+                        sauvegarder_config(config)
+                        st.success(f"Produit « {val} » ajouté !")
+                        st.rerun()
+            with c_m2:
+                del_mat = st.selectbox("Sélectionner un produit à supprimer", ["-- Sélectionner --"] + config["materiaux"], key="del_mat_box")
+                st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
+                if st.button("🗑️ Supprimer le produit sélectionné", use_container_width=True):
+                    if del_mat != "-- Sélectionner --":
+                        config["materiaux"].remove(del_mat)
+                        sauvegarder_config(config)
+                        st.success(f"Produit « {del_mat} » retiré de la liste !")
+                        st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
-            del_macon = st.selectbox("Supprimer un ouvrier", ["-- Sélectionner --"] + config["macons"], key="del_macon_box")
-            st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
-            if st.button("🗑️ Supprimer cet ouvrier", use_container_width=True):
-                if del_macon != "-- Sélectionner --":
-                    config["macons"].remove(del_macon)
-                    sauvegarder_config(config)
-                    st.success(f"Ouvrier supprimé !")
-                    st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
+            # 4. Compagnons
+            st.write("---")
+            st.markdown("**👷 4. Compagnons / Équipe**")
+            c_o1, c_o2 = st.columns(2)
+            with c_o1:
+                nouveau_macon = st.text_input("Nouvel ouvrier à ajouter", placeholder="Ex : NOM & Prénom...", key="add_macon")
+                if st.button("➕ Ajouter cet ouvrier", use_container_width=True):
+                    val = nouveau_macon.strip()
+                    if val and val not in config["macons"]:
+                        config["macons"].append(val)
+                        sauvegarder_config(config)
+                        st.success(f"Compagnon « {val} » ajouté !")
+                        st.rerun()
+            with c_o2:
+                del_macon = st.selectbox("Sélectionner un ouvrier à supprimer", ["-- Sélectionner --"] + config["macons"], key="del_macon_box")
+                st.markdown('<div class="btn-supprimer">', unsafe_allow_html=True)
+                if st.button("🗑️ Supprimer l'ouvrier sélectionné", use_container_width=True):
+                    if del_macon != "-- Sélectionner --":
+                        config["macons"].remove(del_macon)
+                        sauvegarder_config(config)
+                        st.success(f"Compagnon « {del_macon} » retiré de la liste !")
+                        st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
         st.write("---")
 
@@ -1006,34 +864,44 @@ with tab_admin:
         for root, _, files in os.walk(PHOTOS_BASE_DIR):
             total_photos += len([f for f in files if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
 
-        k1, k2, k3 = st.columns(3)
-        with k1:
-            st.metric("Rapports", f"{len(df_all) if df_all is not None else 0}")
-        with k2:
-            st.metric("Photos", f"{total_photos}")
-        with k3:
+        # Cartes KPI
+        kpi1, kpi2, kpi3 = st.columns(3)
+        with kpi1:
+            st.metric("Rapports Validés", f"{len(df_all) if df_all is not None else 0}")
+        with kpi2:
+            st.metric("Documentation Photo", f"{total_photos} clichés")
+        with kpi3:
             projets_actifs = len(df_all["Chantier"].dropna().unique()) if df_all is not None and not df_all.empty else 0
-            st.metric("Projets", f"{projets_actifs}")
+            st.metric("Projets Renseignés", f"{projets_actifs}")
 
         st.write("---")
-        st.markdown("### 📑 Téléchargement Rapport Excel")
+        st.markdown("### 📑 Exportations Documentaires Officielles")
+        c_exp1, c_exp2 = st.columns([1, 1])
 
-        if df_all is not None and not df_all.empty:
-            excel_bytes = generer_rapport_excel(df_all)
-            st.download_button(
-                label="📊 TÉLÉCHARGER LE CLASSEUR EXCEL (.XLSX)",
-                data=excel_bytes,
-                file_name=f"Synthese_Chantiers_{date.today()}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
-            )
-        else:
-            st.button("Export Excel (En attente)", disabled=True, use_container_width=True)
+        with c_exp1:
+            if df_all is not None and not df_all.empty:
+                excel_bytes = generer_rapport_excel(df_all)
+                st.download_button(
+                    label="📊 EXPORT CLASSEUR EXCEL (.XLSX)",
+                    data=excel_bytes,
+                    file_name=f"Synthese_Chantiers_{date.today()}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+            else:
+                st.button("Export Excel (En attente de données)", disabled=True, use_container_width=True)
+
+        with c_exp2:
+            st.markdown("""
+                <div style='color: #FFFFFF !important; font-size: 14px; font-weight: 600; line-height: 1.5; padding-top: 5px;'>
+                    Le classeur inclut : Synthèse des surfaces, ratios de consommation, pointage des équipes et journal brut d'exécution.
+                </div>
+            """, unsafe_allow_html=True)
 
         st.write("---")
         dossiers_chantiers = [d for d in os.listdir(PHOTOS_BASE_DIR) if os.path.isdir(os.path.join(PHOTOS_BASE_DIR, d))]
         if dossiers_chantiers:
-            st.markdown("### 📁 Téléchargement Photos ZIP")
+            st.markdown("### 📁 Dossiers Justificatifs Photographiques")
             for d_ch in sorted(dossiers_chantiers):
                 dir_ch = os.path.join(PHOTOS_BASE_DIR, d_ch)
                 fichiers_total = []
@@ -1049,15 +917,25 @@ with tab_admin:
                             rel_p = os.path.relpath(f_abs, PHOTOS_BASE_DIR)
                             zf.write(f_abs, arcname=rel_p)
 
-                    st.markdown(f"**📁 {d_ch}** — `{len(fichiers_total)} photos`")
-                    st.download_button(label=f"Télécharger ZIP ({d_ch})", data=zip_buf.getvalue(), file_name=f"Photos_{d_ch}.zip", mime="application/zip", key=f"z_{d_ch}", use_container_width=True)
-                    st.write("")
+                    c_info, c_btn = st.columns([3, 1])
+                    with c_info:
+                        st.markdown(f"""
+                            <div style='margin-top: 8px;'>
+                                <span style='color: #FFFFFF !important; font-size: 16px; font-weight: 800;'>📁 {d_ch}</span>
+                                <span style='background-color: #1E293B; color: #38BDF8 !important; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: 700; margin-left: 8px; border: 1px solid #334155;'>
+                                    {len(fichiers_total)} photos classées
+                                </span>
+                            </div>
+                        """, unsafe_allow_html=True)
+                    with c_btn:
+                        st.download_button(label=f"Télécharger ZIP", data=zip_buf.getvalue(), file_name=f"Photos_{d_ch}.zip", mime="application/zip", key=f"z_{d_ch}", use_container_width=True)
 
         st.write("---")
+        # REGISTRE D'ATTACHEMENT AVEC CORRECTION
         if df_all is not None and not df_all.empty and "Chantier" in df_all.columns:
-            st.markdown("### 🔍 Registre des Interventions")
+            st.markdown("### 🔍 Registre d'Attachement & Suivi des Ouvrages")
             chantiers_bruts = [c for c in df_all["Chantier"].dropna().unique() if not str(c).startswith("2026-") and str(c).strip()]
-            f_proj = st.selectbox("Filtrer par projet :", ["Tous les projets"] + list(chantiers_bruts))
+            f_proj = st.selectbox("Filtrer par projet / chantier :", ["Tous les projets"] + list(chantiers_bruts))
 
             df_show = df_all.copy()
             if f_proj != "Tous les projets":
@@ -1069,30 +947,30 @@ with tab_admin:
 
                 conso_val = str(row.get("Consommation", "")).strip()
                 if not conso_val or conso_val == "nan" or conso_val == "Aucun":
-                    badge_conso_html = "<span style='color: #38BDF8 !important; font-size: 13px; font-weight: 700;'>📦 Aucune consommation déclarée</span>"
+                    badge_conso_html = "<span style='color: #94A3B8 !important; font-size: 13px; font-style: italic;'>Aucune consommation déclarée</span>"
                 else:
                     items_conso = conso_val.split(" | ")
                     badge_conso_html = "".join([f"<span class='tag-materiau'>🧪 {c}</span>" for c in items_conso])
 
                 st.markdown(f"""
                     <div class='card-intervention'>
-                        <div style='display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 8px; margin-bottom: 10px;'>
+                        <div style='display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 12px;'>
                             <span class='tag-projet'>🏢 {row.get("Chantier", "")}</span>
                             <span class='tag-date'>📅 {row.get("Date", "")}</span>
                         </div>
-                        <div style='margin-bottom: 8px;'>
+                        <div style='margin-bottom: 10px;'>
                             <span class='tag-corps'>🛠️ {row.get("Corps_d_etat", "")}</span>
                             <span class='tag-rendement'>📏 {row.get("Rendement", "")} {row.get("Unite", "")}</span>
-                            <div class='card-text-cyan' style='margin-top: 4px;'>Phase : {row.get("Phase", "")}</div>
+                            <span style='margin-left: 10px; color: #38BDF8 !important; font-size: 13px; font-weight: 700;'>Phase : {row.get("Phase", "")}</span>
                         </div>
-                        <div style='margin: 8px 0;'>
+                        <div style='margin: 10px 0;'>
                             {badge_conso_html}
                         </div>
-                        <div class='card-text-white'>
-                            👷 <span style='color: #38BDF8 !important; font-weight: 800;'>Équipe :</span> {row.get("Effectif", "")}
+                        <div style='color: #FFFFFF !important; font-size: 14px; font-weight: 600; margin-top: 8px;'>
+                            👷 <b>Effectif présent :</b> {row.get("Effectif", "")}
                         </div>
-                        <div class='card-text-note'>
-                            💬 <span style='color: #5EEAD4 !important; font-weight: 800;'>Note :</span> {row.get("Legende", "R.A.S")}
+                        <div style='color: #E2E8F0 !important; font-size: 14px; margin-top: 6px; font-style: italic;'>
+                            💬 <b>Note de chantier :</b> {row.get("Legende", "R.A.S")}
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
@@ -1111,15 +989,87 @@ with tab_admin:
                                 break
 
                 if valid_paths:
-                    cols = st.columns(min(len(valid_paths), 2))
+                    cols = st.columns(min(len(valid_paths), 4))
                     for i, p_img in enumerate(valid_paths):
                         try:
-                            cols[i % 2].image(Image.open(p_img), use_container_width=True)
+                            cols[i % 4].image(Image.open(p_img), use_container_width=True)
                         except Exception:
                             pass
 
-                st.markdown('<div class="btn-supprimer" style="margin-top: 6px;">', unsafe_allow_html=True)
-                if st.button(f"🗑️ Supprimer cette fiche", key=f"del_row_{orig_idx}"):
+                # CORRECTION PAR LE RESPONSABLE
+                with st.expander(f"✏️ Corriger / Modifier cette fiche ({row.get('Chantier','')} - {row.get('Date','')})"):
+                    st.caption("Modifiez directement les erreurs commises par l'équipe sur le terrain :")
+                    
+                    m_c1, m_c2 = st.columns(2)
+                    with m_c1:
+                        try:
+                            d_val = datetime.strptime(str(row.get("Date", "")), "%Y-%m-%d").date()
+                        except Exception:
+                            d_val = date.today()
+                        m_date = st.date_input("Date", value=d_val, key=f"m_date_{orig_idx}")
+                    with m_c2:
+                        ch_actuel = str(row.get("Chantier", ""))
+                        idx_ch = config["chantiers"].index(ch_actuel) if ch_actuel in config["chantiers"] else 0
+                        m_chantier = st.selectbox("Chantier", config["chantiers"], index=idx_ch, key=f"m_ch_{orig_idx}")
+
+                    m_c3, m_c4 = st.columns(2)
+                    with m_c3:
+                        tache_actuelle = str(row.get("Corps_d_etat", ""))
+                        idx_t = config["taches"].index(tache_actuelle) if tache_actuelle in config["taches"] else 0
+                        m_tache = st.selectbox("Corps d'état", config["taches"], index=idx_t, key=f"m_t_{orig_idx}")
+                    with m_c4:
+                        phases_possibles = [
+                            "Pendant exécution / application",
+                            "Avant travaux (État du support)",
+                            "Après achèvement (Finition)",
+                            "Détail technique / Gorge / Relevé",
+                            "Épreuve d'eau (Test d'étanchéité)",
+                            "Autre"
+                        ]
+                        ph_actuelle = str(row.get("Phase", ""))
+                        idx_ph = phases_possibles.index(ph_actuelle) if ph_actuelle in phases_possibles else 0
+                        m_phase = st.selectbox("Phase", phases_possibles, index=idx_ph, key=f"m_ph_{orig_idx}")
+
+                    m_c5, m_c6 = st.columns(2)
+                    with m_c5:
+                        try:
+                            rend_init = float(row.get("Rendement", 0))
+                        except Exception:
+                            rend_init = 0.0
+                        m_rendement = st.number_input("Rendement réalisé", value=rend_init, step=1.0, format="%.2f", key=f"m_rend_{orig_idx}")
+                    with m_c6:
+                        unites_possibles = ["m²", "ML", "U"]
+                        u_actuelle = str(row.get("Unite", "m²"))
+                        idx_u = unites_possibles.index(u_actuelle) if u_actuelle in unites_possibles else 0
+                        m_unite = st.selectbox("Unité", unites_possibles, index=idx_u, key=f"m_u_{orig_idx}")
+
+                    m_conso = st.text_input("Consommation Matériaux", value=str(row.get("Consommation", "")), key=f"m_conso_{orig_idx}")
+                    m_effectif = st.text_input("Effectif (séparé par des virgules)", value=str(row.get("Effectif", "")), key=f"m_eff_{orig_idx}")
+                    m_legende = st.text_input("Note de chantier / Observation", value=str(row.get("Legende", "")), key=f"m_leg_{orig_idx}")
+
+                    st.write("")
+                    st.markdown('<div class="btn-enregistrer-modif">', unsafe_allow_html=True)
+                    if st.button("💾 Enregistrer les corrections", key=f"btn_save_{orig_idx}", use_container_width=True):
+                        df_all.loc[orig_idx, "Date"] = str(m_date)
+                        df_all.loc[orig_idx, "Chantier"] = str(m_chantier)
+                        df_all.loc[orig_idx, "Corps_d_etat"] = str(m_tache)
+                        df_all.loc[orig_idx, "Phase"] = str(m_phase)
+                        df_all.loc[orig_idx, "Rendement"] = str(m_rendement)
+                        df_all.loc[orig_idx, "Unite"] = str(m_unite)
+                        df_all.loc[orig_idx, "Consommation"] = str(m_conso)
+                        df_all.loc[orig_idx, "Effectif"] = str(m_effectif)
+                        eff_list = [e.strip() for e in str(m_effectif).split(",") if e.strip()]
+                        df_all.loc[orig_idx, "Nb_Ouvriers"] = len(eff_list)
+                        df_all.loc[orig_idx, "Legende"] = str(m_legende).replace(";", " ").replace("|", " ")
+
+                        sauvegarder_donnees(df_all)
+                        st.success("✅ Fiche corrigée et sauvegardée avec succès !")
+                        st.rerun()
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+                # SUPPRESSION DÉFINITIVE D'UNE FICHE
+                st.markdown('<div class="btn-supprimer" style="margin-top: 4px;">', unsafe_allow_html=True)
+                if st.button(f"🗑️ Supprimer cette fiche définitivement", key=f"del_row_{orig_idx}"):
                     df_all = df_all.drop(orig_idx).reset_index(drop=True)
                     sauvegarder_donnees(df_all)
                     st.success("Fiche supprimée avec succès !")
@@ -1132,6 +1082,3 @@ with tab_admin:
                 if os.path.exists(CSV_FILE):
                     os.remove(CSV_FILE)
                     st.rerun()
-
-    elif pin != "":
-        st.error("❌ Code d'accès non autorisé.")
